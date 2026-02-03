@@ -31,6 +31,8 @@ export default class FlashcardsPlugin extends Plugin {
 		new Map();
 	/** Cache of frontmatter fields to detect changes */
 	private frontmatterCache: Map<string, string> = new Map();
+	/** Cache of flashcard body content to detect unauthorized edits */
+	private bodyContentCache: Map<string, string> = new Map();
 	/** Incrementing version per file to prevent stale regenerations */
 	private autoRegenerateVersions: Map<string, number> = new Map();
 	/** Status bar item for showing regeneration status */
@@ -109,6 +111,7 @@ export default class FlashcardsPlugin extends Plugin {
 				if (file instanceof TFile) {
 					console.debug("[Flashcards] vault-modify", file.path);
 					this.handleTemplateFileChange(file, "vault");
+					this.handleFlashcardBodyChange(file);
 				}
 			}),
 		);
@@ -175,6 +178,7 @@ export default class FlashcardsPlugin extends Plugin {
 		}
 		this.autoRegenerateTimers.clear();
 		this.frontmatterCache.clear();
+		this.bodyContentCache.clear();
 		this.autoRegenerateVersions.clear();
 		this.templateContentCache.clear();
 		if (this.templateChangeTimer) {
@@ -274,6 +278,10 @@ export default class FlashcardsPlugin extends Plugin {
 			void (async () => {
 				try {
 					await this.cardService.regenerateCard(file);
+					// Update body cache after regeneration
+					const newContent = await this.app.vault.read(file);
+					const newBody = this.extractFlashcardBody(newContent);
+					this.bodyContentCache.set(file.path, newBody);
 				} catch (error) {
 					console.error("Auto-regeneration failed:", error);
 				} finally {
@@ -288,6 +296,124 @@ export default class FlashcardsPlugin extends Plugin {
 		}, this.settings.autoRegenerateDebounce * 1000);
 
 		this.autoRegenerateTimers.set(file.path, timer);
+	}
+
+	/**
+	 * Handle flashcard body content changes.
+	 * If the body is edited directly (not via frontmatter changes),
+	 * regenerate the card to restore the template-generated content.
+	 */
+	private handleFlashcardBodyChange(file: TFile): void {
+		// Skip if auto-regenerate is disabled
+		if (this.settings.autoRegenerateDebounce <= 0) {
+			return;
+		}
+
+		// Check if this is a flashcard
+		if (!this.deckService.isFlashcard(file)) {
+			return;
+		}
+
+		// Read the file content
+		void this.app.vault.read(file).then((content) => {
+			// Extract the body (everything after frontmatter and protection comment)
+			const body = this.extractFlashcardBody(content);
+			const cachedBody = this.bodyContentCache.get(file.path);
+
+			// Update cache if this is the first time we're seeing this file
+			if (cachedBody === undefined) {
+				this.bodyContentCache.set(file.path, body);
+				return;
+			}
+
+			// Skip if body hasn't changed
+			if (body === cachedBody) {
+				return;
+			}
+
+			// Check if a regeneration is already pending for this file (from frontmatter change)
+			// If so, skip - the pending regeneration will update the body cache
+			if (this.autoRegenerateTimers.has(file.path)) {
+				return;
+			}
+
+			console.debug("[Flashcards] body-change: detected unauthorized body edit", file.path);
+
+			// Update cache immediately (will be updated again after regeneration)
+			this.bodyContentCache.set(file.path, body);
+
+			// Increment version to invalidate any pending regeneration
+			const nextVersion =
+				(this.autoRegenerateVersions.get(file.path) ?? 0) + 1;
+			this.autoRegenerateVersions.set(file.path, nextVersion);
+
+			// Update status bar
+			if (this.statusBarItem) {
+				this.statusBarItem.setText("Flashcards: restoring content...");
+			}
+
+			// Set up debounced regeneration
+			const timer = setTimeout(() => {
+				const currentTimer = this.autoRegenerateTimers.get(file.path);
+				const currentVersion = this.autoRegenerateVersions.get(file.path);
+
+				// Skip if a newer change occurred or a newer timer exists
+				if (currentTimer !== timer || currentVersion !== nextVersion) {
+					return;
+				}
+
+				this.autoRegenerateTimers.delete(file.path);
+
+				if (this.statusBarItem) {
+					this.statusBarItem.setText("Flashcards: regenerating...");
+				}
+
+				void (async () => {
+					try {
+						await this.cardService.regenerateCard(file);
+						// Update body cache after regeneration
+						const newContent = await this.app.vault.read(file);
+						const newBody = this.extractFlashcardBody(newContent);
+						this.bodyContentCache.set(file.path, newBody);
+					} catch (error) {
+						console.error("Auto-regeneration failed:", error);
+					} finally {
+						if (
+							this.statusBarItem &&
+							this.autoRegenerateTimers.size === 0
+						) {
+							this.statusBarItem.setText("");
+						}
+					}
+				})();
+			}, this.settings.autoRegenerateDebounce * 1000);
+
+			this.autoRegenerateTimers.set(file.path, timer);
+		});
+	}
+
+	/**
+	 * Extract the body content from a flashcard file (everything after frontmatter).
+	 */
+	private extractFlashcardBody(content: string): string {
+		// Find the end of frontmatter
+		const fmMatch = content.match(/^---\n[\s\S]*?\n---\n/);
+		if (!fmMatch) {
+			return content;
+		}
+
+		let body = content.slice(fmMatch[0].length);
+
+		// Remove protection comment if present
+		const protectionComment = "<!-- flashcard-content: DO NOT EDIT BELOW - Edit the frontmatter above instead! -->";
+		body = body.replace(
+			new RegExp(
+				`^\\s*${protectionComment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`,
+			),
+			"",
+		);
+
+		return body.trim();
 	}
 
 	/**
@@ -396,7 +522,7 @@ export default class FlashcardsPlugin extends Plugin {
 						fields,
 						this.settings.noteNameTemplate,
 					)
-					.then(() => {
+					.then(async (file) => {
 						new Notice("Card created!");
 
 						this.settings.lastUsedDeck = deckPath;
@@ -404,6 +530,8 @@ export default class FlashcardsPlugin extends Plugin {
 
 						if (createAnother) {
 							this.showCardCreationModal(template, deckPath);
+						} else if (this.settings.openCardAfterCreation) {
+							await this.app.workspace.getLeaf().openFile(file);
 						}
 					})
 					.catch((error: Error) => {
@@ -532,7 +660,10 @@ export default class FlashcardsPlugin extends Plugin {
 		// Set up debounced notification - timer starts immediately on modify event
 		this.templateChangeTimer = setTimeout(() => {
 			this.templateChangeTimer = null;
-			console.debug("[Flashcards] template-change: timer fired", filePath);
+			console.debug(
+				"[Flashcards] template-change: timer fired",
+				filePath,
+			);
 
 			// Double-check that regeneration isn't running
 			if (this.isRegeneratingAll) {

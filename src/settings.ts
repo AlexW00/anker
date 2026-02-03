@@ -24,6 +24,20 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Flashcards").setHeading();
 
 		new Setting(containerEl)
+			.setName("Open card after creation")
+			.setDesc(
+				"When enabled, the newly created card will be opened in the editor. Does not apply when creating multiple cards.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.openCardAfterCreation)
+					.onChange(async (value) => {
+						this.plugin.settings.openCardAfterCreation = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Template folder")
 			.setDesc("Folder containing your flashcard templates")
 			.addText((text) =>

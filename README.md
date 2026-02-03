@@ -101,7 +101,4 @@
     - **API Key:** Secure storage.
     - **Model:** Select model (e.g., GPT-4o, Claude 3.5).
 - Update Dashboard so that:
-    - folders can be collapsed/expanded
-    - gray bg of folder items is gone
-- add regenerate all cards from template option as command; when triggered, it shows the progress in a toast
-- when editing a template, offer to regenerate all cards that use that template (as an obsidian toast) -> triggers the command above; make sure that if a edit? is already running, it doesn't start a new one
+    - folders can be collapsed/expanded when clicking on the folder icon (also changes icon); clicking on the text still opens the deck

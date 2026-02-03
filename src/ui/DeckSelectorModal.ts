@@ -65,7 +65,7 @@ export class DeckSelectorModal extends FuzzySuggestModal<DeckOption> {
 
 		// Show existing decks + new folder option
 		const options: DeckOption[] = this.decks.map((deck) => ({
-			display: `${deck.path} (${deck.stats.new} new, ${deck.stats.learning} learning, ${deck.stats.due} due)`,
+			display: `${deck.path} (${deck.stats.new} new, ${deck.stats.learn} learn, ${deck.stats.relearn} relearn, ${deck.stats.review} review)`,
 			path: deck.path,
 			isNew: false,
 		}));

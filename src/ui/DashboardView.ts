@@ -11,7 +11,7 @@ import type { Deck } from "../types";
 import { DeckSelectorModal } from "./DeckSelectorModal";
 import { TemplateSelectorModal } from "./TemplateSelectorModal";
 import { CardCreationModal } from "./CardCreationModal";
-import { DeckBaseViewService } from "./DeckBaseViewService";
+import { DeckBaseViewService, type StateFilter } from "./DeckBaseViewService";
 
 export const DASHBOARD_VIEW_TYPE = "flashcards-dashboard";
 
@@ -164,24 +164,61 @@ export class DashboardView extends ItemView {
 			});
 			const statsEl = infoEl.createDiv({ cls: "flashcard-deck-stats" });
 
-			if (deck.stats.new > 0) {
-				statsEl.createSpan({
-					text: `${deck.stats.new}`,
-					cls: "flashcard-stat flashcard-stat-new",
+			// Helper to create clickable stat badges
+			const createStatBadge = (
+				count: number,
+				filter: StateFilter,
+				cls: string,
+				label: string,
+			) => {
+				if (count <= 0) return;
+				const badge = statsEl.createSpan({
+					text: `${count} ${label}`,
+					cls: `flashcard-stat ${cls} flashcard-stat-clickable`,
 				});
-			}
-			if (deck.stats.learning > 0) {
-				statsEl.createSpan({
-					text: `${deck.stats.learning}`,
-					cls: "flashcard-stat flashcard-stat-learning",
+				badge.setAttr("role", "button");
+				badge.setAttr("tabindex", "0");
+				badge.setAttr("title", `View ${label} cards`);
+				badge.setAttr("aria-label", `View ${label} cards`);
+				badge.addEventListener("click", (event) => {
+					event.stopPropagation();
+					void this.deckBaseViewService.openDeckBaseView(
+						deck.path,
+						deck.name,
+						filter,
+					);
 				});
-			}
-			if (deck.stats.due > 0) {
-				statsEl.createSpan({
-					text: `${deck.stats.due}`,
-					cls: "flashcard-stat flashcard-stat-due",
+				badge.addEventListener("keydown", (event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						void this.deckBaseViewService.openDeckBaseView(
+							deck.path,
+							deck.name,
+							filter,
+						);
+					}
 				});
-			}
+			};
+
+			createStatBadge(deck.stats.new, "new", "flashcard-stat-new", "new");
+			createStatBadge(
+				deck.stats.learn,
+				"learn",
+				"flashcard-stat-learning",
+				"learn",
+			);
+			createStatBadge(
+				deck.stats.relearn,
+				"relearn",
+				"flashcard-stat-relearn",
+				"relearn",
+			);
+			createStatBadge(
+				deck.stats.review,
+				"review",
+				"flashcard-stat-due",
+				"review",
+			);
 
 			// Actions
 			const actionsEl = deckEl.createDiv({
@@ -274,7 +311,7 @@ export class DashboardView extends ItemView {
 						fields,
 						this.plugin.settings.noteNameTemplate,
 					)
-					.then(async () => {
+					.then(async (file) => {
 						new Notice("Card created!");
 
 						// Update last used deck
@@ -286,6 +323,8 @@ export class DashboardView extends ItemView {
 
 						if (createAnother) {
 							this.showCardCreationModal(template, deckPath);
+						} else if (this.plugin.settings.openCardAfterCreation) {
+							await this.app.workspace.getLeaf().openFile(file);
 						}
 					})
 					.catch((error: Error) => {

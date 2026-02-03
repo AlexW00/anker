@@ -65,13 +65,14 @@
 
 .flashcard-deck-name-link {
 	cursor: pointer;
-	text-decoration: underline;
-	text-decoration-thickness: 1px;
-	text-underline-offset: 2px;
+	text-decoration: none;
 }
 
 .flashcard-deck-name-link:hover {
 	color: var(--text-accent);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
 }
 
 .flashcard-deck-stats {
@@ -80,25 +81,44 @@
 }
 
 .flashcard-stat {
-	padding: var(--size-2-1) var(--size-4-2);
-	border-radius: var(--radius-s);
+	padding: var(--size-2-2) var(--size-4-3);
+	border-radius: var(--radius-m);
 	font-size: var(--font-ui-smaller);
 	font-weight: var(--font-medium);
+	background-color: var(--background-primary-alt);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.flashcard-stat-clickable {
+	cursor: pointer;
+	text-decoration: none;
+	transition: background-color 0.1s ease;
+}
+
+.flashcard-stat-clickable:hover {
+	text-decoration: underline;
+	background-color: var(--background-modifier-hover);
+}
+
+.flashcard-stat-clickable:focus-visible {
+	outline: 2px solid var(--background-modifier-border-focus);
+	outline-offset: 2px;
 }
 
 .flashcard-stat-new {
-	background: var(--color-blue);
-	color: var(--text-on-accent);
+	color: var(--color-blue);
 }
 
 .flashcard-stat-learning {
-	background: var(--color-orange);
-	color: var(--text-on-accent);
+	color: var(--color-orange);
+}
+
+.flashcard-stat-relearn {
+	color: var(--color-red);
 }
 
 .flashcard-stat-due {
-	background: var(--color-green);
-	color: var(--text-on-accent);
+	color: var(--color-green);
 }
 
 .flashcard-deck-actions {

@@ -56,7 +56,10 @@ export class TemplateService {
 				unknown
 			>;
 			const keys = frontmatter ? Object.keys(frontmatter) : [];
-			console.debug("[Flashcards] template-parse: frontmatter keys", keys);
+			console.debug(
+				"[Flashcards] template-parse: frontmatter keys",
+				keys,
+			);
 			return { frontmatter, body };
 		} catch {
 			console.debug(

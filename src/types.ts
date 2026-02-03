@@ -40,8 +40,9 @@ export interface Flashcard {
  */
 export interface DeckStats {
 	new: number; // Cards never reviewed (state = New)
-	learning: number; // Cards in learning/relearning (state = Learning | Relearning)
-	due: number; // Cards due for review (state = Review, due <= now)
+	learn: number; // Cards in learn state (state = Learning)
+	relearn: number; // Cards in relearn state (state = Relearning)
+	review: number; // Cards due for review (state = Review, due <= now)
 	total: number; // Total cards in deck
 }
 
@@ -80,6 +81,8 @@ export interface FlashcardTemplate {
  */
 export type DeckViewColumn =
 	| "file.name"
+	| "file.ctime"
+	| "file.mtime"
 	| "template"
 	| "state"
 	| "due"
@@ -94,6 +97,8 @@ export type DeckViewColumn =
 /** Human-readable labels for deck view columns */
 export const DECK_VIEW_COLUMN_LABELS: Record<DeckViewColumn, string> = {
 	"file.name": "File Name",
+	"file.ctime": "Created",
+	"file.mtime": "Modified",
 	template: "Template",
 	state: "State",
 	due: "Due",
@@ -109,6 +114,8 @@ export const DECK_VIEW_COLUMN_LABELS: Record<DeckViewColumn, string> = {
 /** All available deck view columns */
 export const ALL_DECK_VIEW_COLUMNS: DeckViewColumn[] = [
 	"file.name",
+	"file.ctime",
+	"file.mtime",
 	"template",
 	"state",
 	"due",
@@ -139,6 +146,8 @@ export interface FlashcardsPluginSettings {
 	showOnlyCurrentSide: boolean;
 	/** Columns to display in deck base view */
 	deckViewColumns: DeckViewColumn[];
+	/** If true, open the created card in edit view after creation (unless 'Create & add another' is used) */
+	openCardAfterCreation: boolean;
 }
 
 /** Default basic template content */
@@ -195,12 +204,15 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	showOnlyCurrentSide: false,
 	deckViewColumns: [
 		"file.name",
+		"file.ctime",
+		"file.mtime",
 		"template",
 		"state",
 		"due",
 		"reps",
 		"lapses",
 	],
+	openCardAfterCreation: true,
 };
 
 /**

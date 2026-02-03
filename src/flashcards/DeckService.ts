@@ -93,8 +93,9 @@ export class DeckService {
 	calculateStats(flashcards: Flashcard[]): DeckStats {
 		const now = new Date();
 		let newCount = 0;
-		let learningCount = 0;
-		let dueCount = 0;
+		let learnCount = 0;
+		let relearnCount = 0;
+		let reviewCount = 0;
 
 		for (const card of flashcards) {
 			const review = card.frontmatter.review;
@@ -106,20 +107,23 @@ export class DeckService {
 			const state = review.state;
 			if (state === State.New) {
 				newCount++;
-			} else if (state === State.Learning || state === State.Relearning) {
-				learningCount++;
+			} else if (state === State.Learning) {
+				learnCount++;
+			} else if (state === State.Relearning) {
+				relearnCount++;
 			} else if (state === State.Review) {
 				const dueDate = new Date(review.due);
 				if (dueDate <= now) {
-					dueCount++;
+					reviewCount++;
 				}
 			}
 		}
 
 		return {
 			new: newCount,
-			learning: learningCount,
-			due: dueCount,
+			learn: learnCount,
+			relearn: relearnCount,
+			review: reviewCount,
 			total: flashcards.length,
 		};
 	}
