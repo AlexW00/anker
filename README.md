@@ -1,10 +1,12 @@
 # Obsidian Flashcards
 
-A spaced repetition flashcards plugin for Obsidian using the FSRS algorithm.
+An Obsidian **native** flashcards plugin using the FSRS algorithm.
 
 DISCLAIMER: Alpha! Planning to release it as a beta soon tho!
 
 -> [todos](todo.md)
+
+https://github.com/user-attachments/assets/30173ecd-e0e3-4e80-a01d-f1c3a2e3f397
 
 ## Features
 
