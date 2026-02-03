@@ -24,6 +24,8 @@ export default class FlashcardsPlugin extends Plugin {
 		new Map();
 	/** Cache of frontmatter fields to detect changes */
 	private frontmatterCache: Map<string, string> = new Map();
+	/** Incrementing version per file to prevent stale regenerations */
+	private autoRegenerateVersions: Map<string, number> = new Map();
 	/** Status bar item for showing regeneration status */
 	private statusBarItem: HTMLElement | null = null;
 
@@ -122,6 +124,7 @@ export default class FlashcardsPlugin extends Plugin {
 		}
 		this.autoRegenerateTimers.clear();
 		this.frontmatterCache.clear();
+		this.autoRegenerateVersions.clear();
 		// Views are automatically cleaned up
 	}
 
@@ -174,6 +177,11 @@ export default class FlashcardsPlugin extends Plugin {
 		// Update cache
 		this.frontmatterCache.set(file.path, fieldsHash);
 
+		// Increment version to invalidate any pending regeneration
+		const nextVersion =
+			(this.autoRegenerateVersions.get(file.path) ?? 0) + 1;
+		this.autoRegenerateVersions.set(file.path, nextVersion);
+
 		// Clear existing timer for this file
 		const existingTimer = this.autoRegenerateTimers.get(file.path);
 		if (existingTimer) {
@@ -187,6 +195,14 @@ export default class FlashcardsPlugin extends Plugin {
 
 		// Set up debounced regeneration
 		const timer = setTimeout(() => {
+			const currentTimer = this.autoRegenerateTimers.get(file.path);
+			const currentVersion = this.autoRegenerateVersions.get(file.path);
+
+			// Skip if a newer change occurred or a newer timer exists
+			if (currentTimer !== timer || currentVersion !== nextVersion) {
+				return;
+			}
+
 			this.autoRegenerateTimers.delete(file.path);
 
 			if (this.statusBarItem) {

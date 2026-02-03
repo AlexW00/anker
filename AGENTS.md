@@ -1,10 +1,57 @@
-# Obsidian community plugin
+# Obsidian Flashcards Plugin
 
 ## Project overview
 
-- Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
-- Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
-- Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
+**Target**: Obsidian Community Plugin for spaced repetition flashcards using FSRS scheduling.
+
+**Core Architecture**: **Hydration Model** - flashcard content is stored as YAML frontmatter (source of truth), and the Markdown body is regenerated from Nunjucks templates.
+
+### Service Layer (`src/flashcards/`, `src/srs/`)
+
+- **CardService** - Creates/regenerates flashcard files, manages frontmatter ↔ body hydration
+- **DeckService** - Discovers folders containing flashcards, calculates deck statistics  
+- **TemplateService** - Nunjucks rendering, variable extraction from `{{ var }}` syntax
+- **Scheduler** - Wraps `ts-fsrs` for FSRS algorithm; converts between plugin's `ReviewState` and ts-fsrs `Card`
+
+### UI Layer (`src/ui/`)
+
+- **DashboardView** - Main view showing deck hierarchy and stats
+- **ReviewView** - Study mode with keyboard shortcuts (Space/1-4), multi-side reveal using `---` separators
+- **Modals** - Card creation, deck selection, template selection
+
+### Data Flow
+
+1. User fills form → `CardService.createCard()` saves fields to frontmatter + renders body
+2. Template/field changes → `CardService.regenerateCard()` re-renders body from frontmatter  
+3. Review rating → `Scheduler.review()` → `CardService.updateReviewState()` updates frontmatter
+
+### Key Conventions
+
+**Flashcard Frontmatter Structure:**
+```yaml
+type: flashcard
+template: "[[Templates/Flashcards/Basic]]"
+fields:
+  front: "Question" 
+  back: "Answer"
+review:
+  due: "2024-01-15T10:00:00.000Z"
+  state: 0  # 0=New, 1=Learning, 2=Review, 3=Relearning
+```
+
+**Templates**: Use Nunjucks syntax (`{{ variable }}`). Variables extracted via regex (ignoring HTML comments).
+
+**Body Protection**: Generated content starts with `<!-- flashcard-content: DO NOT EDIT BELOW -->`
+
+### Key Dependencies
+
+- **ts-fsrs** - FSRS spaced repetition algorithm (`Rating`, `State`, `Card` types)
+- **nunjucks** - Template rendering (configured with `autoescape: false` for Markdown)
+
+**Technical Details:**
+- Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian
+- Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`
+- Plugin folder symlinked into Obsidian vault for testing
 
 ## Environment & tooling
 

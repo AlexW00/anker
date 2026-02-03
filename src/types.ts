@@ -191,7 +191,14 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
 	autoRegenerateDebounce: 1,
 	showOnlyCurrentSide: false,
-	deckViewColumns: ["file.name", "template", "state", "due", "reps", "lapses"],
+	deckViewColumns: [
+		"file.name",
+		"template",
+		"state",
+		"due",
+		"reps",
+		"lapses",
+	],
 };
 
 /**
