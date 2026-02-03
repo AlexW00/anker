@@ -161,6 +161,8 @@ export interface FlashcardsPluginSettings {
 	noteNameTemplate: string;
 	/** Last used deck path for quick access */
 	lastUsedDeck: string;
+	/** Last used template path for quick access */
+	lastUsedTemplate: string;
 	/** Default template content used when creating new templates */
 	defaultTemplateContent: string;
 	/** Seconds to wait before auto-regenerating after edits (cards or templates). Set to 0 to disable. */
@@ -224,6 +226,7 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	templateFolder: "Templates/Flashcards",
 	noteNameTemplate: "{{timestamp}}",
 	lastUsedDeck: "",
+	lastUsedTemplate: "",
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
 	autoRegenerateDebounce: 1,
 	showOnlyCurrentSide: false,

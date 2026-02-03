@@ -19,7 +19,10 @@ export class TextareaSuggest {
 		this.textarea.addEventListener("input", this.onInput.bind(this));
 		this.textarea.addEventListener("keydown", this.onKeydown.bind(this));
 		this.textarea.addEventListener("blur", this.onBlur.bind(this));
-		this.textarea.addEventListener("scroll", this.updatePosition.bind(this));
+		this.textarea.addEventListener(
+			"scroll",
+			this.updatePosition.bind(this),
+		);
 	}
 
 	/**
@@ -36,7 +39,7 @@ export class TextareaSuggest {
 
 		// Find [[ before cursor that isn't closed yet
 		const beforeCursor = value.substring(0, cursorPos);
-		const linkMatch = beforeCursor.match(/\[\[([^\[\]]*?)$/);
+		const linkMatch = beforeCursor.match(/\[\[([^[]*?)$/);
 
 		if (linkMatch) {
 			const query = linkMatch[1] ?? "";
@@ -122,11 +125,11 @@ export class TextareaSuggest {
 		const rect = this.textarea.getBoundingClientRect();
 
 		// Position below the textarea
-		this.suggestEl.style.position = "fixed";
-		this.suggestEl.style.left = `${rect.left}px`;
-		this.suggestEl.style.top = `${rect.bottom + 4}px`;
-		this.suggestEl.style.width = `${rect.width}px`;
-		this.suggestEl.style.zIndex = "1000";
+		this.suggestEl.setCssProps({
+			"--flashcard-suggest-left": `${rect.left}px`,
+			"--flashcard-suggest-top": `${rect.bottom + 4}px`,
+			"--flashcard-suggest-width": `${rect.width}px`,
+		});
 	}
 
 	private updateSelectedClass(): void {
@@ -177,10 +180,7 @@ export class TextareaSuggest {
 		const beforeCursor = value.substring(0, cursorPos);
 
 		// Replace [[ + query with [[filename]]
-		const newBefore = beforeCursor.replace(
-			/\[\[[^\[\]]*?$/,
-			`[[${file.basename}]]`,
-		);
+		const newBefore = beforeCursor.replace(/\[\[[^[]*?$/, `[[${file.basename}]]`);
 		this.textarea.value = newBefore + value.substring(cursorPos);
 		this.textarea.selectionStart = this.textarea.selectionEnd =
 			newBefore.length;

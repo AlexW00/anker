@@ -350,58 +350,134 @@
 
 /* Card Creation Modal */
 .flashcard-creation-modal {
-	min-width: 400px;
+	min-width: 500px;
 }
 
-.flashcard-modal-subtitle {
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
-	margin-bottom: var(--size-4-4);
-}
-
-.flashcard-modal-buttons {
+/* Template name modal */
+.flashcard-template-name-modal .flashcard-modal-buttons {
 	display: flex;
-	gap: var(--size-4-2);
 	justify-content: flex-end;
+	gap: var(--size-4-2);
 	margin-top: var(--size-4-4);
 	padding-top: var(--size-4-4);
 	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Header row with inline selectors */
+.flashcard-modal-header-row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: var(--size-2-1);
+	margin-bottom: var(--size-4-4);
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-semibold);
+}
+
+.flashcard-modal-header-separator {
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: var(--size-4-4);
+}
+
+.flashcard-modal-header-text {
+	color: var(--text-normal);
+}
+
+.flashcard-inline-dropdown {
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-semibold);
+	color: var(--text-accent);
+	margin: 0 var(--size-2-1);
+}
+
+/* Field row - horizontal layout */
+.flashcard-field-row {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-4-3);
+}
+
+.flashcard-field-label-inline {
+	flex-shrink: 0;
+	width: 80px;
+	font-weight: var(--font-medium);
+	color: var(--text-muted);
+	padding-top: var(--size-4-2);
+	text-align: right;
+}
+
+.flashcard-textarea-container {
+	flex: 1;
+	position: relative;
+}
+
+.flashcard-textarea-container .flashcard-textarea-full-width {
+	width: 100%;
+	padding-right: var(--size-4-8);
+	padding-bottom: var(--size-4-6);
+	resize: vertical;
+}
+
+/* Attachment button - bottom right of textarea */
+.flashcard-attach-btn {
+	position: absolute;
+	bottom: var(--size-4-2);
+	right: var(--size-4-2);
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-faint);
+	border-radius: var(--radius-s);
+	transition: color 0.1s ease, background 0.1s ease;
+}
+
+.flashcard-attach-btn:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.flashcard-attach-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* Button container - Cancel left, Create buttons right */
+.flashcard-modal-buttons-v2 {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: var(--size-4-4);
+	padding-top: var(--size-4-4);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.flashcard-buttons-left,
+.flashcard-buttons-right {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+/* Hidden file input for attachment picker */
+.flashcard-hidden-input {
+	display: none;
 }
 
 .flashcard-textarea-full-width {
 	width: 100%;
 }
 
-/* Field wrapper for toolbar + textarea layout */
-.flashcard-field-wrapper {
-	display: flex;
-	flex-direction: column;
-	margin-bottom: var(--size-4-3);
-}
-
-.flashcard-field-label {
-	font-weight: var(--font-medium);
-	margin-bottom: var(--size-2-2);
-	color: var(--text-normal);
-}
-
-/* Media toolbar above textarea */
-.flashcard-field-toolbar {
-	display: flex;
-	gap: var(--size-2-1);
-	padding: var(--size-2-2);
-	background: var(--background-secondary);
-	border-radius: var(--radius-s) var(--radius-s) 0 0;
-	border: 1px solid var(--background-modifier-border);
-	border-bottom: none;
-}
-
-.flashcard-field-wrapper .flashcard-textarea-full-width {
-	border-radius: 0 0 var(--radius-s) var(--radius-s);
-}
-
 /* Textarea Suggest Popover */
 .flashcard-suggest-container {
+	position: fixed;
+	left: var(--flashcard-suggest-left, 0px);
+	top: var(--flashcard-suggest-top, 0px);
+	width: var(--flashcard-suggest-width, 240px);
+	z-index: var(--layer-menu);
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);

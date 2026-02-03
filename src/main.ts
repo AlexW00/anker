@@ -244,51 +244,17 @@ export default class FlashcardsPlugin extends Plugin {
 
 	/**
 	 * Start the card creation flow.
+	 * Opens the CardCreationModal directly with deck/template selectors embedded.
 	 */
 	private createCard() {
-		new DeckSelectorModal(this.app, this.deckService, (deckResult) => {
-			const deckPath = deckResult.path;
-
-			void this.templateService
-				.getTemplates(this.settings.templateFolder)
-				.then((templates) => {
-					if (templates.length === 0) {
-						new Notice(
-							`No templates found in "${this.settings.templateFolder}". Please create a template first.`,
-						);
-						return;
-					}
-
-					if (templates.length === 1) {
-						const template = templates[0];
-						if (template) {
-							showCardCreationModal(
-								this.app,
-								this.cardService,
-								this.settings,
-								() => this.saveSettings(),
-								template,
-								deckPath,
-							);
-						}
-					} else {
-						new TemplateSelectorModal(
-							this.app,
-							templates,
-							(template) => {
-								showCardCreationModal(
-									this.app,
-									this.cardService,
-									this.settings,
-									() => this.saveSettings(),
-									template,
-									deckPath,
-								);
-							},
-						).open();
-					}
-				});
-		}).open();
+		showCardCreationModal(
+			this.app,
+			this.cardService,
+			this.deckService,
+			this.templateService,
+			this.settings,
+			() => this.saveSettings(),
+		);
 	}
 
 	/**

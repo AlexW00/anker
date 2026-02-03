@@ -3,13 +3,10 @@ import {
 	ItemView,
 	WorkspaceLeaf,
 	setIcon,
-	Notice,
 	debounce,
 } from "obsidian";
 import type FlashcardsPlugin from "../main";
 import type { Deck } from "../types";
-import { DeckSelectorModal } from "./DeckSelectorModal";
-import { TemplateSelectorModal } from "./TemplateSelectorModal";
 import { showCardCreationModal } from "./CardCreationFlow";
 import { DeckBaseViewService, type StateFilter } from "./DeckBaseViewService";
 
@@ -251,60 +248,15 @@ export class DashboardView extends ItemView {
 	}
 
 	private startCardCreation() {
-		// Step 1: Select deck
-		new DeckSelectorModal(
+		// Open the CardCreationModal directly with embedded deck/template selectors
+		showCardCreationModal(
 			this.app,
+			this.plugin.cardService,
 			this.plugin.deckService,
-			(deckResult) => {
-				const deckPath = deckResult.path;
-
-				// Step 2: Select template
-				void this.plugin.templateService
-					.getTemplates(this.plugin.settings.templateFolder)
-					.then((templates) => {
-						if (templates.length === 0) {
-							// No templates found - show error
-							const templateFolder =
-								this.plugin.settings.templateFolder;
-							new Notice(
-								`No templates found in "${templateFolder}". Please create a template first.`,
-							);
-							return;
-						}
-
-						if (templates.length === 1) {
-							// Only one template, use it directly
-							const template = templates[0];
-							if (template) {
-								showCardCreationModal(
-									this.app,
-									this.plugin.cardService,
-									this.plugin.settings,
-									() => this.plugin.saveSettings(),
-									template,
-									deckPath,
-									{ onRefresh: () => this.render() },
-								);
-							}
-						} else {
-							new TemplateSelectorModal(
-								this.app,
-								templates,
-								(template) => {
-									showCardCreationModal(
-										this.app,
-										this.plugin.cardService,
-										this.plugin.settings,
-										() => this.plugin.saveSettings(),
-										template,
-										deckPath,
-										{ onRefresh: () => this.render() },
-									);
-								},
-							).open();
-						}
-					});
-			},
-		).open();
+			this.plugin.templateService,
+			this.plugin.settings,
+			() => this.plugin.saveSettings(),
+			{ onRefresh: () => this.render() },
+		);
 	}
 }

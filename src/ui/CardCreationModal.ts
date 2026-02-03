@@ -1,26 +1,20 @@
 import {
 	App,
 	ButtonComponent,
-	ExtraButtonComponent,
+	DropdownComponent,
 	Modal,
 	Notice,
+	setIcon,
 } from "obsidian";
-import type { FlashcardTemplate } from "../types";
+import type { Deck, FlashcardTemplate, FlashcardsPluginSettings } from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
+import type { DeckService } from "../flashcards/DeckService";
+import type { TemplateService } from "../flashcards/TemplateService";
 
 /**
- * Supported media types for file picker.
+ * MIME type accept strings for all media types combined.
  */
-type MediaType = "image" | "video" | "audio";
-
-/**
- * MIME type accept strings for each media type.
- */
-const MEDIA_ACCEPT: Record<MediaType, string> = {
-	image: "image/*",
-	video: "video/*",
-	audio: "audio/*",
-};
+const ALL_MEDIA_ACCEPT = "image/*,video/*,audio/*";
 
 /**
  * Generate a UUID v4 string.
@@ -34,44 +28,56 @@ function generateUUID(): string {
 }
 
 /**
- * Modal for creating a flashcard with a dynamic form based on template variables.
- * Includes a media toolbar and paste handling for images.
+ * Options for the CardCreationModal.
  */
-export class CardCreationModal extends Modal {
-	private template: FlashcardTemplate;
-	private deckPath: string;
-	private attachmentFolder: string;
-	private onSubmit: (
+export interface CardCreationModalOptions {
+	app: App;
+	deckService: DeckService;
+	templateService: TemplateService;
+	settings: FlashcardsPluginSettings;
+	onSubmit: (
 		fields: Record<string, string>,
+		deckPath: string,
+		templatePath: string,
 		createAnother: boolean,
 	) => void;
+	/** Initial deck path (optional, uses lastUsedDeck or first available) */
+	initialDeckPath?: string;
+	/** Initial template (optional, uses lastUsedTemplate or first available) */
+	initialTemplate?: FlashcardTemplate;
+}
+
+/**
+ * Modal for creating a flashcard with a dynamic form based on template variables.
+ * Includes inline deck/template switching, media toolbar, and paste handling.
+ */
+export class CardCreationModal extends Modal {
+	private deckService: DeckService;
+	private templateService: TemplateService;
+	private settings: FlashcardsPluginSettings;
+	private onSubmit: CardCreationModalOptions["onSubmit"];
+
+	private currentDeckPath: string;
+	private currentTemplate: FlashcardTemplate;
+	private availableDecks: Deck[] = [];
+	private availableTemplates: FlashcardTemplate[] = [];
 	private fields: Record<string, string> = {};
 	private activeTextarea: HTMLTextAreaElement | null = null;
 	private textareaSuggests: TextareaSuggest[] = [];
 
-	constructor(
-		app: App,
-		template: FlashcardTemplate,
-		deckPath: string,
-		attachmentFolder: string,
-		onSubmit: (
-			fields: Record<string, string>,
-			createAnother: boolean,
-		) => void,
-	) {
-		super(app);
-		this.template = template;
-		this.deckPath = deckPath;
-		this.attachmentFolder = attachmentFolder;
-		this.onSubmit = onSubmit;
+	constructor(options: CardCreationModalOptions) {
+		super(options.app);
+		this.deckService = options.deckService;
+		this.templateService = options.templateService;
+		this.settings = options.settings;
+		this.onSubmit = options.onSubmit;
 
-		// Initialize fields with empty values
-		for (const variable of template.variables) {
-			this.fields[variable.name] = variable.defaultValue || "";
-		}
+		// Will be set in onOpen after loading available options
+		this.currentDeckPath = options.initialDeckPath ?? "";
+		this.currentTemplate = options.initialTemplate ?? ({} as FlashcardTemplate);
 	}
 
-	onOpen() {
+	async onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("flashcard-creation-modal");
@@ -80,41 +86,129 @@ export class CardCreationModal extends Modal {
 		this.textareaSuggests.forEach((s) => s.destroy());
 		this.textareaSuggests = [];
 
-		// Header
-		contentEl.createEl("h2", { text: `New Card: ${this.template.name}` });
-		contentEl.createEl("p", {
-			text: `Creating in: ${this.deckPath}`,
-			cls: "flashcard-modal-subtitle",
-		});
+		// Load available decks and templates
+		this.availableDecks = this.deckService.discoverDecks();
+		this.availableTemplates = await this.templateService.getTemplates(
+			this.settings.templateFolder,
+		);
 
-		// Dynamic form fields with toolbar
-		for (const variable of this.template.variables) {
-			const fieldWrapper = contentEl.createDiv({
-				cls: "flashcard-field-wrapper",
-			});
+		// Handle no templates case
+		if (this.availableTemplates.length === 0) {
+			new Notice(
+				`No templates found in "${this.settings.templateFolder}". Please create a template first.`,
+			);
+			this.close();
+			return;
+		}
 
-			// Field label
-			fieldWrapper.createEl("label", {
+		// Determine initial deck path
+		if (!this.currentDeckPath) {
+			// Priority: lastUsedDeck -> first available deck -> vault root
+			if (this.settings.lastUsedDeck && this.availableDecks.some(d => d.path === this.settings.lastUsedDeck)) {
+				this.currentDeckPath = this.settings.lastUsedDeck;
+			} else if (this.availableDecks.length > 0) {
+				this.currentDeckPath = this.availableDecks[0]?.path ?? "/";
+			} else {
+				this.currentDeckPath = "/";
+			}
+		}
+
+		// Determine initial template
+		if (!this.currentTemplate.path) {
+			// Priority: lastUsedTemplate -> first available template
+			const lastTemplate = this.availableTemplates.find(
+				(t) => t.path === this.settings.lastUsedTemplate,
+			);
+			this.currentTemplate = lastTemplate ?? this.availableTemplates[0] ?? ({} as FlashcardTemplate);
+		}
+
+		// Initialize fields for current template
+		this.initializeFields();
+
+		this.renderContent();
+	}
+
+	private initializeFields() {
+		// Preserve existing field values when switching templates (for common field names)
+		const oldFields = { ...this.fields };
+		this.fields = {};
+
+		for (const variable of this.currentTemplate.variables) {
+			// Keep value if field existed before, otherwise use default
+			this.fields[variable.name] =
+				oldFields[variable.name] ?? variable.defaultValue ?? "";
+		}
+	}
+
+	private renderContent() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		// Header row: "New [Template] Card in Deck [Deck]"
+		const headerRow = contentEl.createDiv({ cls: "flashcard-modal-header-row" });
+
+		headerRow.createSpan({ text: "New ", cls: "flashcard-modal-header-text" });
+
+		// Template selector
+		this.createInlineDropdown(
+			headerRow,
+			this.availableTemplates.map((t) => ({ label: t.name, value: t.path })),
+			this.currentTemplate.path,
+			(selectedPath) => {
+				const newTemplate = this.availableTemplates.find((t) => t.path === selectedPath);
+				if (newTemplate && newTemplate.path !== this.currentTemplate.path) {
+					this.currentTemplate = newTemplate;
+					this.initializeFields();
+					this.renderContent();
+				}
+			},
+		);
+
+		headerRow.createSpan({ text: " Card in Deck ", cls: "flashcard-modal-header-text" });
+
+		// Deck selector
+		const deckOptions = this.availableDecks.map((d) => ({
+			label: this.getDeckDisplayLabel(d.path),
+			value: d.path,
+		}));
+		// Add vault root option only if there are no decks
+		if (deckOptions.length === 0) {
+			deckOptions.push({ label: "(Vault root)", value: "/" });
+		}
+
+		this.createInlineDropdown(
+			headerRow,
+			deckOptions,
+			this.currentDeckPath,
+			(selectedPath) => {
+				this.currentDeckPath = selectedPath;
+				this.renderContent();
+			},
+		);
+
+		contentEl.createDiv({ cls: "flashcard-modal-header-separator" });
+
+		// Dynamic form fields
+		for (const variable of this.currentTemplate.variables) {
+			const fieldRow = contentEl.createDiv({ cls: "flashcard-field-row" });
+
+			// Field label (left side)
+			fieldRow.createEl("label", {
 				text: this.formatFieldName(variable.name),
-				cls: "flashcard-field-label",
+				cls: "flashcard-field-label-inline",
 			});
 
-			// Toolbar
-			const toolbar = fieldWrapper.createDiv({
-				cls: "flashcard-field-toolbar",
+			// Textarea container (right side)
+			const textareaContainer = fieldRow.createDiv({
+				cls: "flashcard-textarea-container",
 			});
-
-			// Create toolbar buttons (image, video, audio)
-			this.createToolbarButton(toolbar, "image", "Insert image", variable.name);
-			this.createToolbarButton(toolbar, "video", "Insert video", variable.name);
-			this.createToolbarButton(toolbar, "music", "Insert audio", variable.name);
 
 			// Textarea
-			const textarea = fieldWrapper.createEl("textarea", {
+			const textarea = textareaContainer.createEl("textarea", {
 				cls: "flashcard-textarea-full-width",
 				attr: {
 					placeholder: `Enter ${variable.name}...`,
-					rows: "3",
+					rows: "4",
 				},
 			});
 			textarea.value = this.fields[variable.name] ?? "";
@@ -127,53 +221,118 @@ export class CardCreationModal extends Modal {
 				this.activeTextarea = textarea;
 			});
 
-			// Paste handler for images
-			textarea.addEventListener("paste", (e) =>
-				this.handlePaste(e, textarea, variable.name),
-			);
+			// Paste handler for media
+			textarea.addEventListener("paste", (e) => {
+				void this.handlePaste(e, textarea, variable.name);
+			});
 
 			// Add [[ link suggestions
 			const suggest = new TextareaSuggest(this.app, textarea);
 			this.textareaSuggests.push(suggest);
+
+			// Single attachment button (bottom-right corner)
+			const attachBtn = textareaContainer.createDiv({
+				cls: "flashcard-attach-btn",
+			});
+			setIcon(attachBtn, "paperclip");
+			attachBtn.setAttribute("aria-label", "Attach media (image, video, audio)");
+			attachBtn.addEventListener("click", () => {
+				this.openFilePicker(variable.name);
+			});
 		}
 
 		// Button container
 		const buttonContainer = contentEl.createDiv({
-			cls: "flashcard-modal-buttons",
+			cls: "flashcard-modal-buttons-v2",
 		});
 
-		// Create button
-		new ButtonComponent(buttonContainer)
+		// Cancel button (left side)
+		const leftButtons = buttonContainer.createDiv({ cls: "flashcard-buttons-left" });
+		new ButtonComponent(leftButtons)
+			.setButtonText("Cancel")
+			.onClick(() => this.close());
+
+		// Create buttons (right side)
+		const rightButtons = buttonContainer.createDiv({ cls: "flashcard-buttons-right" });
+
+		new ButtonComponent(rightButtons)
+			.setButtonText("Create & add another")
+			.onClick(() => {
+				this.submitCard(true);
+			});
+
+		new ButtonComponent(rightButtons)
 			.setButtonText("Create")
 			.setCta()
 			.onClick(() => {
-				this.close();
-				this.onSubmit(this.fields, false);
+				this.submitCard(false);
 			});
-
-		// Create & Add Another button
-		new ButtonComponent(buttonContainer)
-			.setButtonText("Create & add another")
-			.onClick(() => {
-				this.onSubmit({ ...this.fields }, true);
-				// Clear fields for next card
-				for (const variable of this.template.variables) {
-					this.fields[variable.name] = "";
-				}
-				this.onOpen(); // Refresh the form
-			});
-
-		// Cancel button
-		new ButtonComponent(buttonContainer)
-			.setButtonText("Cancel")
-			.onClick(() => this.close());
 
 		// Focus first field
 		const firstInput = contentEl.querySelector("textarea");
 		if (firstInput) {
-			(firstInput as HTMLTextAreaElement).focus();
-			this.activeTextarea = firstInput as HTMLTextAreaElement;
+			firstInput.focus();
+			this.activeTextarea = firstInput;
 		}
+	}
+
+	private submitCard(createAnother: boolean) {
+		if (createAnother) {
+			this.onSubmit(
+				{ ...this.fields },
+				this.currentDeckPath,
+				this.currentTemplate.path,
+				true,
+			);
+			// Clear fields for next card
+			for (const variable of this.currentTemplate.variables) {
+				this.fields[variable.name] = "";
+			}
+			this.renderContent();
+		} else {
+			this.close();
+			this.onSubmit(
+				this.fields,
+				this.currentDeckPath,
+				this.currentTemplate.path,
+				false,
+			);
+		}
+	}
+
+	private getDeckDisplayLabel(path: string): string {
+		if (path === "/" || path === "") return "(Vault root)";
+		const normalized = path
+			.split("/")
+			.filter(Boolean)
+			.map((segment) => this.stripFolderPrefix(segment));
+		const fullLabel = normalized.join(" / ");
+		if (fullLabel.length <= 40 || normalized.length <= 3) {
+			return fullLabel;
+		}
+		return `${normalized[0]} / … / ${normalized[normalized.length - 1]}`;
+	}
+
+	private stripFolderPrefix(segment: string): string {
+		return segment.replace(/^folder\s+/i, "");
+	}
+
+	/**
+	 * Create an inline dropdown using Obsidian's DropdownComponent.
+	 */
+	private createInlineDropdown(
+		container: HTMLElement,
+		options: { label: string; value: string }[],
+		currentValue: string,
+		onChange: (value: string) => void,
+	): void {
+		const dropdown = new DropdownComponent(container);
+		dropdown.selectEl.addClass("flashcard-inline-dropdown");
+		options.forEach((option) => {
+			dropdown.addOption(option.value, option.label);
+		});
+		dropdown.setValue(currentValue);
+		dropdown.onChange((value) => onChange(value));
 	}
 
 	onClose() {
@@ -186,46 +345,26 @@ export class CardCreationModal extends Modal {
 	}
 
 	/**
-	 * Create a toolbar button for uploading media from the system.
+	 * Open a native file picker to select media file (image, video, or audio).
 	 */
-	private createToolbarButton(
-		toolbar: HTMLElement,
-		icon: string,
-		tooltip: string,
-		fieldName: string,
-	): void {
-		const mediaType: MediaType =
-			icon === "image" ? "image" : icon === "video" ? "video" : "audio";
-
-		new ExtraButtonComponent(toolbar)
-			.setIcon(icon)
-			.setTooltip(tooltip)
-			.onClick(() => {
-				this.openFilePicker(mediaType, fieldName);
-			});
-	}
-
-	/**
-	 * Open a native file picker to select a file from the user's system.
-	 */
-	private openFilePicker(mediaType: MediaType, fieldName: string): void {
+	private openFilePicker(fieldName: string): void {
 		const input = document.createElement("input");
 		input.type = "file";
-		input.accept = MEDIA_ACCEPT[mediaType];
-		input.style.display = "none";
+		input.accept = ALL_MEDIA_ACCEPT;
+		input.addClass("flashcard-hidden-input");
 
-		input.addEventListener("change", async () => {
+		input.addEventListener("change", () => {
 			const file = input.files?.[0];
 			if (!file) return;
 
-			try {
-				await this.saveFileToVault(file, fieldName);
-			} catch (error) {
-				console.error("Failed to save file:", error);
-				new Notice("Failed to save file");
-			} finally {
-				input.remove();
-			}
+			void this.saveFileToVault(file, fieldName)
+				.catch((error) => {
+					console.error("Failed to save file:", error);
+					new Notice("Failed to save file");
+				})
+				.finally(() => {
+					input.remove();
+				});
 		});
 
 		document.body.appendChild(input);
@@ -242,10 +381,11 @@ export class CardCreationModal extends Modal {
 		const buffer = await file.arrayBuffer();
 		const extension = file.name.split(".").pop() || "bin";
 		const filename = `${generateUUID()}.${extension}`;
-		const path = `${this.attachmentFolder}/${filename}`;
+		const attachmentFolder = this.settings.attachmentFolder;
+		const path = `${attachmentFolder}/${filename}`;
 
 		// Ensure attachment folder exists
-		await this.ensureFolderExists(this.attachmentFolder);
+		await this.ensureFolderExists(attachmentFolder);
 
 		// Create the file in vault
 		const vaultFile = await this.app.vault.createBinary(path, buffer);
@@ -265,14 +405,12 @@ export class CardCreationModal extends Modal {
 	 * Get the textarea element for a given field name.
 	 */
 	private getTextareaForField(fieldName: string): HTMLTextAreaElement | null {
-		const wrappers = this.contentEl.querySelectorAll(
-			".flashcard-field-wrapper",
-		);
-		const index = this.template.variables.findIndex(
+		const rows = this.contentEl.querySelectorAll(".flashcard-field-row");
+		const index = this.currentTemplate.variables.findIndex(
 			(v) => v.name === fieldName,
 		);
-		if (index >= 0 && wrappers[index]) {
-			return wrappers[index].querySelector("textarea");
+		if (index >= 0 && rows[index]) {
+			return rows[index].querySelector("textarea");
 		}
 		return null;
 	}
@@ -305,10 +443,11 @@ export class CardCreationModal extends Modal {
 					const mimeType = item.type;
 					const extension = this.getExtensionFromMime(mimeType);
 					const filename = `${generateUUID()}.${extension}`;
-					const path = `${this.attachmentFolder}/${filename}`;
+					const attachmentFolder = this.settings.attachmentFolder;
+					const path = `${attachmentFolder}/${filename}`;
 
 					// Ensure attachment folder exists
-					await this.ensureFolderExists(this.attachmentFolder);
+					await this.ensureFolderExists(attachmentFolder);
 
 					// Create the file in vault
 					const file = await this.app.vault.createBinary(
@@ -369,10 +508,7 @@ export class CardCreationModal extends Modal {
 	/**
 	 * Insert text at the cursor position in a textarea.
 	 */
-	private insertAtCursor(
-		textarea: HTMLTextAreaElement,
-		text: string,
-	): void {
+	private insertAtCursor(textarea: HTMLTextAreaElement, text: string): void {
 		const start = textarea.selectionStart;
 		const end = textarea.selectionEnd;
 		const before = textarea.value.substring(0, start);

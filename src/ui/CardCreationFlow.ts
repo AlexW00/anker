@@ -1,6 +1,8 @@
 import { App, Notice } from "obsidian";
 import type { FlashcardTemplate, FlashcardsPluginSettings } from "../types";
 import type { CardService } from "../flashcards/CardService";
+import type { DeckService } from "../flashcards/DeckService";
+import type { TemplateService } from "../flashcards/TemplateService";
 import { CardCreationModal } from "./CardCreationModal";
 
 /**
@@ -12,36 +14,43 @@ export interface CardCreationCallbacks {
 }
 
 /**
- * Handles the card creation modal flow, used by both main.ts and DashboardView.
- * Consolidates the duplicated showCardCreationModal logic.
+ * Opens the card creation modal directly, with deck/template selection embedded in the modal.
+ * This is the main entry point for creating flashcards.
  */
 export function showCardCreationModal(
 	app: App,
 	cardService: CardService,
+	deckService: DeckService,
+	templateService: TemplateService,
 	settings: FlashcardsPluginSettings,
 	saveSettings: () => Promise<void>,
-	template: FlashcardTemplate,
-	deckPath: string,
 	callbacks?: CardCreationCallbacks,
+	/** Optional initial deck path override */
+	initialDeckPath?: string,
+	/** Optional initial template override */
+	initialTemplate?: FlashcardTemplate,
 ): void {
-	new CardCreationModal(
+	new CardCreationModal({
 		app,
-		template,
-		deckPath,
-		settings.attachmentFolder,
-		(fields, createAnother) => {
+		deckService,
+		templateService,
+		settings,
+		initialDeckPath,
+		initialTemplate,
+		onSubmit: (fields, deckPath, templatePath, createAnother) => {
 			void cardService
 				.createCard(
 					deckPath,
-					template.path,
+					templatePath,
 					fields,
 					settings.noteNameTemplate,
 				)
 				.then(async (file) => {
 					new Notice("Card created!");
 
-					// Update last used deck
+					// Update last used deck and template
 					settings.lastUsedDeck = deckPath;
+					settings.lastUsedTemplate = templatePath;
 					await saveSettings();
 
 					// Refresh dashboard if callback provided
@@ -49,18 +58,7 @@ export function showCardCreationModal(
 						await callbacks.onRefresh();
 					}
 
-					if (createAnother) {
-						// Recursive call for "Create & add another"
-						showCardCreationModal(
-							app,
-							cardService,
-							settings,
-							saveSettings,
-							template,
-							deckPath,
-							callbacks,
-						);
-					} else if (settings.openCardAfterCreation) {
+					if (!createAnother && settings.openCardAfterCreation) {
 						await app.workspace.getLeaf().openFile(file);
 					}
 				})
@@ -68,5 +66,5 @@ export function showCardCreationModal(
 					new Notice(`Failed to create card: ${error.message}`);
 				});
 		},
-	).open();
+	}).open();
 }
