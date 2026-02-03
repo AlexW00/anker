@@ -10,18 +10,25 @@
     - `type`: `flashcard` (identifier).
     - `template`: `[[Templates/Vocab Card]]` (WikiLink to the template file).
     - `fields`: Object containing the raw data variables (e.g., `{ word: "Cat", meaning: "Gato" }`).
-    - `review`: Object containing SRS data (e.g., ease factor, interval).
-    - `dueAt`: ISO timestamp for the next review.
+    - `review`: Object containing the persisted scheduler state (source of truth for scheduling).
+        - Uses the `Card` shape from [`ts-fsrs`](https://www.npmjs.com/package/ts-fsrs) (stored as JSON-friendly primitives):
+            - `due`: ISO timestamp for next review
+            - `stability`: number
+            - `difficulty`: number
+            - `elapsed_days`: number
+            - `scheduled_days`: number
+            - `learning_steps`: number
+            - `reps`: number
+            - `lapses`: number
+            - `state`: `New` | `Learning` | `Review` | `Relearning` (string or numeric enum)
+            - `last_review` (optional): ISO timestamp
+    - `dueAt`: ISO timestamp for the next review (optional convenience field; should mirror `review.due`).
     - _Note:_ The body content is considered a "Hydration Artifact"—it can be overwritten by the plugin based on the fields and template.
 
 ## 2. Templating Engine (Nunjucks)
 
 - **Engine:** [Nunjucks](https://mozilla.github.io/nunjucks/) (Mozilla).
-- **Why:** Familiar syntax (`{{ variable }}`), safe defaults, and powerful filter system for AI.
-- **Custom Filters:**
-    - **AI Generation:** Implement an async filter `| aiGenerate`.
-        - _Usage:_ `{{ "Translate this to french" | aiGenerate }}`
-        - _Implementation:_ Plugin registers an async Nunjucks filter that calls the configured AI provider API.
+- **Why:** Familiar syntax (`{{ variable }}`), safe defaults, and a powerful filter system.
 - **Field Types:**
     - Defined implicitly by usage in the template, or explicitly via a "Template Config" block in the template file (optional future feature).
 
@@ -46,10 +53,6 @@
 - **General:**
     - **Flashcard Note Name:** Template string (default: `{{date}}-{{time}}` or Unix timestamp).
     - **Template Folder:** Path to folder containing `.md` template files.
-- **AI Integration:**
-    - **Provider:** (OpenAI, Anthropic, Local, etc.)
-    - **API Key:** Secure storage.
-    - **Model:** Select model (e.g., GPT-4o, Claude 3.5).
 
 ## 5. Dashboard View
 
@@ -75,7 +78,8 @@
     - Shows Side 1 -> User interaction -> Shows Side 2 -> ... -> Rating.
 - **Rating System:**
     - Standard buttons: Again, Hard, Good, Easy.
-    - Engine: FSRS (Free Spaced Repetition Scheduler) or Anki-sm2 algorithm.
+    - Engine: FSRS (Free Spaced Repetition Scheduler) via `ts-fsrs`.
+    - Parameters: use `ts-fsrs` defaults for MVP (future: expose FSRS parameters in plugin settings).
 - **Interactions:**
     - `Space`: Reveal / Next.
     - `Cmd+E` / Edit Button: Opens the underlying Markdown file for manual fixes (user should edit Frontmatter `fields`, not body).
@@ -86,3 +90,14 @@
 - `Flashcards: Create new card` (Quick add)
 - `Flashcards: Start Review` (Selector for deck)
 - `Flashcards: Regenerate current card` (For use when editing a single note)
+
+## 8. Future (Post-MVP)
+
+- **AI-assisted templating (optional):**
+    - **Custom Nunjucks Filters:** Implement an async filter `| aiGenerate`.
+        - _Usage:_ `{{ "Translate this to french" | aiGenerate }}`
+        - _Implementation:_ Plugin registers an async Nunjucks filter that calls the configured AI provider API.
+- **AI Integration Settings:**
+    - **Provider:** (OpenAI, Anthropic, Local, etc.)
+    - **API Key:** Secure storage.
+    - **Model:** Select model (e.g., GPT-4o, Claude 3.5).
