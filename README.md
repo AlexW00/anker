@@ -16,7 +16,7 @@ DISCLAIMER: Alpha! Planning to release it as a beta soon tho!
 
 ## Installation
 
-### From Community Plugins (Recommended)
+### From Community Plugins
 
 Not available yet!
 

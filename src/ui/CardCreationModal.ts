@@ -61,7 +61,7 @@ type DeckSearchOption = {
 
 class DeckPathSuggest extends AbstractInputSuggest<DeckSearchOption> {
 	private getOptions: () => DeckSearchOption[];
-	private onSelect: (option: DeckSearchOption) => void;
+	private onSelectCallback: (option: DeckSearchOption) => void;
 	private inputElement: HTMLInputElement;
 
 	constructor(
@@ -72,7 +72,7 @@ class DeckPathSuggest extends AbstractInputSuggest<DeckSearchOption> {
 	) {
 		super(app, inputEl);
 		this.getOptions = getOptions;
-		this.onSelect = onSelect;
+		this.onSelectCallback = onSelect;
 		this.inputElement = inputEl;
 
 		this.inputElement.addEventListener("focus", () => {
@@ -124,7 +124,7 @@ class DeckPathSuggest extends AbstractInputSuggest<DeckSearchOption> {
 
 	selectSuggestion(option: DeckSearchOption): void {
 		this.inputElement.value = option.path;
-		this.onSelect(option);
+		this.onSelectCallback(option);
 		this.close();
 	}
 
