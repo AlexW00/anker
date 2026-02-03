@@ -4,6 +4,7 @@ import {
 	MarkdownRenderer,
 	TFile,
 	WorkspaceLeaf,
+	debounce,
 	setIcon,
 } from "obsidian";
 import type FlashcardsPlugin from "../main";
@@ -27,10 +28,17 @@ export class ReviewView extends ItemView {
 	plugin: FlashcardsPlugin;
 	private session: ReviewSession | null = null;
 	private currentContent: string[] = [];
+	private debouncedReloadCard: () => void;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
 		super(leaf);
 		this.plugin = plugin;
+		// Debounce reload to avoid excessive updates during editing
+		this.debouncedReloadCard = debounce(
+			() => void this.reloadCurrentCard(),
+			300,
+			true,
+		);
 	}
 
 	getViewType(): string {
@@ -46,7 +54,33 @@ export class ReviewView extends ItemView {
 	}
 
 	async onOpen() {
+		this.registerFileChangeListener();
 		this.renderEmpty();
+	}
+
+	/**
+	 * Register listener for file modifications to auto-update the current card.
+	 */
+	private registerFileChangeListener() {
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (!this.session) return;
+				const currentCard =
+					this.session.cards[this.session.currentIndex];
+				if (currentCard && file.path === currentCard.path) {
+					this.debouncedReloadCard();
+				}
+			}),
+		);
+	}
+
+	/**
+	 * Reload the current card content and re-render.
+	 */
+	private async reloadCurrentCard() {
+		if (!this.session) return;
+		await this.loadCurrentCard();
+		this.render();
 	}
 
 	async onClose() {
@@ -144,24 +178,59 @@ export class ReviewView extends ItemView {
 		});
 		const cardEl = cardContainer.createDiv({ cls: "flashcard-card" });
 
-		// Render current side
-		const sideContent = this.currentContent[this.session.currentSide] || "";
-		const renderTarget = cardEl.createDiv({
-			cls: "flashcard-card-content",
-		});
+		// Render sides based on setting
+		const showOnlyCurrentSide = this.plugin.settings.showOnlyCurrentSide;
 
-		// Use Obsidian's markdown renderer
-		void MarkdownRenderer.render(
-			this.app,
-			sideContent,
-			renderTarget,
-			currentCard.path,
-			this,
-		);
+		if (showOnlyCurrentSide) {
+			// Only show current side
+			const sideContent =
+				this.currentContent[this.session.currentSide] || "";
+			const renderTarget = cardEl.createDiv({
+				cls: "flashcard-card-content",
+			});
+			void MarkdownRenderer.render(
+				this.app,
+				sideContent,
+				renderTarget,
+				currentCard.path,
+				this,
+			);
+		} else {
+			// Show all sides up to and including the current side
+			for (let i = 0; i <= this.session.currentSide; i++) {
+				const sideContent = this.currentContent[i] || "";
+				const renderTarget = cardEl.createDiv({
+					cls: "flashcard-card-content",
+				});
+				void MarkdownRenderer.render(
+					this.app,
+					sideContent,
+					renderTarget,
+					currentCard.path,
+					this,
+				);
+
+				// Add separator between sides (but not after the last one)
+				if (i < this.session.currentSide) {
+					cardEl.createEl("hr", { cls: "flashcard-side-separator" });
+				}
+			}
+		}
 
 		// Controls
 		const controlsContainer = container.createDiv({
 			cls: "flashcard-controls",
+		});
+
+		// Edit button (bottom left, always visible)
+		new ButtonComponent(controlsContainer)
+			.setIcon("edit")
+			.setTooltip("Edit card")
+			.setClass("flashcard-btn-edit")
+			.onClick(() => void this.editCurrentCard());
+
+		const actionsContainer = controlsContainer.createDiv({
+			cls: "flashcard-actions",
 		});
 
 		const isLastSide =
@@ -169,31 +238,15 @@ export class ReviewView extends ItemView {
 
 		if (!isLastSide) {
 			// Show "Reveal" button
-			new ButtonComponent(controlsContainer)
+			new ButtonComponent(actionsContainer)
 				.setButtonText("Show answer")
 				.setCta()
 				.setClass("flashcard-btn-reveal")
 				.onClick(() => this.revealNext());
-
-			// Keyboard hint
-			controlsContainer.createSpan({
-				text: "Press Space to reveal",
-				cls: "flashcard-hint",
-			});
 		} else {
 			// Show rating buttons
-			this.renderRatingButtons(controlsContainer, currentCard);
+			this.renderRatingButtons(actionsContainer, currentCard);
 		}
-
-		// Edit button (always visible)
-		new ButtonComponent(container)
-			.setIcon("edit")
-			.setTooltip("Edit card (Cmd/Ctrl + E)")
-			.setClass("flashcard-btn-edit")
-			.onClick(() => void this.editCurrentCard());
-
-		// Register keyboard shortcuts
-		this.registerKeyboardShortcuts(container);
 	}
 
 	private renderRatingButtons(container: HTMLElement, card: Flashcard) {
@@ -255,53 +308,6 @@ export class ReviewView extends ItemView {
 			Rating.Easy,
 			"flashcard-btn-easy",
 		);
-
-		// Keyboard hints
-		const hintsEl = container.createDiv({ cls: "flashcard-rating-hints" });
-		hintsEl.createSpan({ text: "1: Again" });
-		hintsEl.createSpan({ text: "2: Hard" });
-		hintsEl.createSpan({ text: "3: Good" });
-		hintsEl.createSpan({ text: "4: Easy" });
-	}
-
-	private registerKeyboardShortcuts(container: HTMLElement) {
-		const handler = (e: KeyboardEvent) => {
-			if (!this.session) return;
-
-			const isLastSide =
-				this.session.currentSide >= this.session.totalSides - 1;
-
-			if (e.code === "Space") {
-				e.preventDefault();
-				if (!isLastSide) {
-					this.revealNext();
-				}
-			} else if (isLastSide) {
-				if (e.code === "Digit1" || e.code === "Numpad1") {
-					e.preventDefault();
-					void this.rateCard(Rating.Again);
-				} else if (e.code === "Digit2" || e.code === "Numpad2") {
-					e.preventDefault();
-					void this.rateCard(Rating.Hard);
-				} else if (e.code === "Digit3" || e.code === "Numpad3") {
-					e.preventDefault();
-					void this.rateCard(Rating.Good);
-				} else if (e.code === "Digit4" || e.code === "Numpad4") {
-					e.preventDefault();
-					void this.rateCard(Rating.Easy);
-				}
-			}
-
-			// Edit shortcut (Cmd/Ctrl + E)
-			if ((e.metaKey || e.ctrlKey) && e.code === "KeyE") {
-				e.preventDefault();
-				void this.editCurrentCard();
-			}
-		};
-
-		container.addEventListener("keydown", handler);
-		container.setAttribute("tabindex", "0");
-		container.focus();
 	}
 
 	private revealNext() {

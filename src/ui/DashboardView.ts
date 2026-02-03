@@ -4,6 +4,8 @@ import {
 	WorkspaceLeaf,
 	setIcon,
 	Notice,
+	debounce,
+	TFolder,
 } from "obsidian";
 import type FlashcardsPlugin from "../main";
 import type { Deck } from "../types";
@@ -18,10 +20,13 @@ export const DASHBOARD_VIEW_TYPE = "flashcards-dashboard";
  */
 export class DashboardView extends ItemView {
 	plugin: FlashcardsPlugin;
+	private debouncedRender: () => void;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
 		super(leaf);
 		this.plugin = plugin;
+		// Debounce render to avoid excessive updates during batch operations
+		this.debouncedRender = debounce(() => void this.render(), 300, true);
 	}
 
 	getViewType(): string {
@@ -37,6 +42,20 @@ export class DashboardView extends ItemView {
 	}
 
 	async onOpen() {
+		// Register vault events for auto-refresh
+		this.registerEvent(
+			this.app.vault.on("create", () => this.debouncedRender()),
+		);
+		this.registerEvent(
+			this.app.vault.on("delete", () => this.debouncedRender()),
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", () => this.debouncedRender()),
+		);
+		this.registerEvent(
+			this.app.vault.on("modify", () => this.debouncedRender()),
+		);
+
 		await this.render();
 	}
 
@@ -68,12 +87,6 @@ export class DashboardView extends ItemView {
 			.setIcon("plus")
 			.setCta()
 			.onClick(() => this.startCardCreation());
-
-		// Refresh button
-		new ButtonComponent(toolbar)
-			.setIcon("refresh-cw")
-			.setTooltip("Refresh")
-			.onClick(() => void this.render());
 
 		// Deck list
 		const deckList = container.createDiv({ cls: "flashcard-deck-list" });
@@ -120,9 +133,25 @@ export class DashboardView extends ItemView {
 			// Deck info
 			const infoEl = deckEl.createDiv({ cls: "flashcard-deck-info" });
 
-			const nameEl = infoEl.createSpan({ cls: "flashcard-deck-name" });
+			const nameEl = infoEl.createSpan({
+				cls: "flashcard-deck-name flashcard-deck-name-link",
+			});
 			setIcon(nameEl, "folder");
 			nameEl.createSpan({ text: ` ${deck.name}` });
+			nameEl.setAttr("role", "button");
+			nameEl.setAttr("tabindex", "0");
+			nameEl.setAttr("title", "Reveal in file explorer");
+			nameEl.setAttr("aria-label", "Reveal in file explorer");
+			nameEl.addEventListener("click", (event) => {
+				event.stopPropagation();
+				void this.revealDeckInFileExplorer(deck.path);
+			});
+			nameEl.addEventListener("keydown", (event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					void this.revealDeckInFileExplorer(deck.path);
+				}
+			});
 
 			// Stats badges
 			const statsEl = infoEl.createDiv({ cls: "flashcard-deck-stats" });
@@ -174,6 +203,35 @@ export class DashboardView extends ItemView {
 		for (const deck of rootDecks) {
 			renderDeck(deck);
 		}
+	}
+
+	private async revealDeckInFileExplorer(deckPath: string) {
+		const folder = this.app.vault.getAbstractFileByPath(deckPath);
+		if (!(folder instanceof TFolder)) {
+			new Notice(`Folder not found: ${deckPath}`);
+			return;
+		}
+
+		let leaf: WorkspaceLeaf | null =
+			this.app.workspace.getLeavesOfType("file-explorer")[0] ?? null;
+		if (!leaf) {
+			leaf = this.app.workspace.getLeftLeaf(false);
+			if (leaf) {
+				await leaf.setViewState({
+					type: "file-explorer",
+					active: true,
+				});
+			}
+		}
+
+		if (!leaf) return;
+		void this.app.workspace.revealLeaf(leaf);
+
+		const view = leaf.view as unknown as {
+			revealInFolder?: (file: unknown) => void;
+		};
+
+		view.revealInFolder?.(folder);
 	}
 
 	private startCardCreation() {

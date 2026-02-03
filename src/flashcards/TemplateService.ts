@@ -13,7 +13,8 @@ export class TemplateService {
 
 	constructor(app: App, defaultTemplateContent?: string) {
 		this.app = app;
-		this.defaultTemplateContent = defaultTemplateContent ?? DEFAULT_BASIC_TEMPLATE;
+		this.defaultTemplateContent =
+			defaultTemplateContent ?? DEFAULT_BASIC_TEMPLATE;
 		// Configure Nunjucks with autoescape disabled (we're generating Markdown, not HTML)
 		this.env = new nunjucks.Environment(null, {
 			autoescape: false,

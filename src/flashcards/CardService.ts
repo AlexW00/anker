@@ -181,11 +181,29 @@ export class CardService {
 
 	/**
 	 * Get the card sides (split by ---).
+	 * Ignores --- that appear inside HTML comments.
 	 */
 	getCardSides(content: string): string[] {
 		const body = this.extractBody(content);
+		// Remove HTML comments before splitting to avoid treating --- inside comments as separators
+		const bodyWithoutComments = body.replace(/<!--[\s\S]*?-->/g, (match) => {
+			// Replace comment content with placeholder that preserves line count but has no ---
+			return match.replace(/---/g, "___COMMENT_HR___");
+		});
 		// Split by horizontal rule (---)
-		const sides = body.split(/\n---\n/);
+		const commentFreeParts = bodyWithoutComments.split(/\n---\n/);
+		// Now split the original body at the same positions
+		const sides: string[] = [];
+		let currentPos = 0;
+		for (let i = 0; i < commentFreeParts.length; i++) {
+			const part = commentFreeParts[i];
+			if (part === undefined) continue;
+			const partLength = part.length;
+			const originalPart = body.slice(currentPos, currentPos + partLength);
+			sides.push(originalPart);
+			// Skip past this part and the separator (\n---\n = 5 chars)
+			currentPos += partLength + 5;
+		}
 		return sides.map((s) => s.trim()).filter((s) => s.length > 0);
 	}
 

@@ -53,8 +53,7 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 				"Content used when creating new templates. Use {{ variable }} for fields. Content in HTML comments (<!-- -->) is ignored when parsing variables.",
 			)
 			.addTextArea((text) => {
-				text
-					.setPlaceholder(DEFAULT_BASIC_TEMPLATE)
+				text.setPlaceholder(DEFAULT_BASIC_TEMPLATE)
 					.setValue(this.plugin.settings.defaultTemplateContent)
 					.onChange(async (value) => {
 						this.plugin.settings.defaultTemplateContent = value;
@@ -68,14 +67,31 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 		// Reset to default button
 		new Setting(containerEl)
 			.setName("Reset default template")
-			.setDesc("Reset the default template content to the built-in basic template")
+			.setDesc(
+				"Reset the default template content to the built-in basic template",
+			)
 			.addButton((button) =>
-				button
-					.setButtonText("Reset")
-					.onClick(async () => {
-						this.plugin.settings.defaultTemplateContent = DEFAULT_BASIC_TEMPLATE;
+				button.setButtonText("Reset").onClick(async () => {
+					this.plugin.settings.defaultTemplateContent =
+						DEFAULT_BASIC_TEMPLATE;
+					await this.plugin.saveSettings();
+					this.display(); // Refresh to show reset value
+				}),
+			);
+
+		new Setting(containerEl).setName("Review").setHeading();
+
+		new Setting(containerEl)
+			.setName("Show only current side")
+			.setDesc(
+				"When enabled, only the current side is shown during review. When disabled, all sides up to the current one are shown.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showOnlyCurrentSide)
+					.onChange(async (value) => {
+						this.plugin.settings.showOnlyCurrentSide = value;
 						await this.plugin.saveSettings();
-						this.display(); // Refresh to show reset value
 					}),
 			);
 	}

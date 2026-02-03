@@ -86,6 +86,8 @@ export interface FlashcardsPluginSettings {
 	lastUsedDeck: string;
 	/** Default template content used when creating new templates */
 	defaultTemplateContent: string;
+	/** If true, only show the current side during review. If false, show all sides up to the current one. */
+	showOnlyCurrentSide: boolean;
 }
 
 /** Default basic template content */
@@ -138,6 +140,7 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	noteNameTemplate: "{{timestamp}}",
 	lastUsedDeck: "",
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
+	showOnlyCurrentSide: false,
 };
 
 /**

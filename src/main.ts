@@ -1,9 +1,6 @@
 import { Notice, Plugin, TFile } from "obsidian";
 import { FlashcardsSettingTab } from "./settings";
-import {
-	DEFAULT_SETTINGS,
-	type FlashcardsPluginSettings,
-} from "./types";
+import { DEFAULT_SETTINGS, type FlashcardsPluginSettings } from "./types";
 import { TemplateService } from "./flashcards/TemplateService";
 import { CardService } from "./flashcards/CardService";
 import { DeckService } from "./flashcards/DeckService";

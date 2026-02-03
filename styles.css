@@ -58,6 +58,17 @@
 	font-weight: var(--font-medium);
 }
 
+.flashcard-deck-name-link {
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
+}
+
+.flashcard-deck-name-link:hover {
+	color: var(--text-accent);
+}
+
 .flashcard-deck-stats {
 	display: flex;
 	gap: var(--size-4-2);
@@ -152,6 +163,7 @@
 	align-items: flex-start;
 	overflow-y: auto;
 	margin-bottom: var(--size-4-4);
+	padding: var(--size-4-6);
 }
 
 .flashcard-card {
@@ -175,12 +187,28 @@
 	margin-bottom: 0;
 }
 
+/* Side separator in cumulative view */
+.flashcard-side-separator {
+	margin: var(--size-4-4) 0;
+	border: none;
+	border-top: 2px dashed var(--background-modifier-border);
+}
+
 /* Controls */
 .flashcard-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	width: 100%;
+}
+
+.flashcard-actions {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: var(--size-4-2);
+	flex: 1;
 }
 
 .flashcard-btn-reveal {
@@ -259,9 +287,7 @@
 
 /* Edit button - uses clickable-icon pattern */
 .flashcard-btn-edit {
-	position: absolute;
-	top: var(--size-4-4);
-	right: var(--size-4-4);
+	position: static;
 }
 
 .flashcard-btn-edit.clickable-icon {
