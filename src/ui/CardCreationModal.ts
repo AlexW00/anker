@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, ButtonComponent, Modal, Setting } from "obsidian";
 import type { FlashcardTemplate } from "../types";
 
 /**
@@ -67,33 +67,30 @@ export class CardCreationModal extends Modal {
 		});
 
 		// Create button
-		const createBtn = buttonContainer.createEl("button", {
-			text: "Create",
-			cls: "mod-cta",
-		});
-		createBtn.addEventListener("click", () => {
-			this.close();
-			this.onSubmit(this.fields, false);
-		});
+		new ButtonComponent(buttonContainer)
+			.setButtonText("Create")
+			.setCta()
+			.onClick(() => {
+				this.close();
+				this.onSubmit(this.fields, false);
+			});
 
 		// Create & Add Another button
-		const createAnotherBtn = buttonContainer.createEl("button", {
-			text: "Create & add another",
-		});
-		createAnotherBtn.addEventListener("click", () => {
-			this.onSubmit({ ...this.fields }, true);
-			// Clear fields for next card
-			for (const variable of this.template.variables) {
-				this.fields[variable.name] = "";
-			}
-			this.onOpen(); // Refresh the form
-		});
+		new ButtonComponent(buttonContainer)
+			.setButtonText("Create & add another")
+			.onClick(() => {
+				this.onSubmit({ ...this.fields }, true);
+				// Clear fields for next card
+				for (const variable of this.template.variables) {
+					this.fields[variable.name] = "";
+				}
+				this.onOpen(); // Refresh the form
+			});
 
 		// Cancel button
-		const cancelBtn = buttonContainer.createEl("button", {
-			text: "Cancel",
-		});
-		cancelBtn.addEventListener("click", () => this.close());
+		new ButtonComponent(buttonContainer)
+			.setButtonText("Cancel")
+			.onClick(() => this.close());
 
 		// Focus first field
 		const firstInput = contentEl.querySelector("textarea");

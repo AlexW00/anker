@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Notice } from "obsidian";
+import { ButtonComponent, ItemView, WorkspaceLeaf, setIcon, Notice } from "obsidian";
 import type FlashcardsPlugin from "../main";
 import type { Deck } from "../types";
 import { DeckSelectorModal } from "./DeckSelectorModal";
@@ -57,15 +57,17 @@ export class DashboardView extends ItemView {
 		});
 
 		// Add Card button
-		const addBtn = toolbar.createEl("button", { cls: "flashcard-btn" });
-		setIcon(addBtn, "plus");
-		addBtn.createSpan({ text: " Add Card" });
-		addBtn.addEventListener("click", () => this.startCardCreation());
+		new ButtonComponent(toolbar)
+			.setButtonText("Add card")
+			.setIcon("plus")
+			.setCta()
+			.onClick(() => this.startCardCreation());
 
 		// Refresh button
-		const refreshBtn = toolbar.createEl("button", { cls: "flashcard-btn" });
-		setIcon(refreshBtn, "refresh-cw");
-		refreshBtn.addEventListener("click", () => void this.render());
+		new ButtonComponent(toolbar)
+			.setIcon("refresh-cw")
+			.setTooltip("Refresh")
+			.onClick(() => void this.render());
 
 		// Deck list
 		const deckList = container.createDiv({ cls: "flashcard-deck-list" });
@@ -81,11 +83,10 @@ export class DashboardView extends ItemView {
 				text: "Create your first card to get started!",
 			});
 
-			const startBtn = emptyState.createEl("button", {
-				text: "Create first card",
-				cls: "mod-cta",
-			});
-			startBtn.addEventListener("click", () => this.startCardCreation());
+			new ButtonComponent(emptyState)
+				.setButtonText("Create first card")
+				.setCta()
+				.onClick(() => this.startCardCreation());
 		} else {
 			this.renderDeckList(deckList, decks);
 		}
@@ -144,14 +145,14 @@ export class DashboardView extends ItemView {
 				cls: "flashcard-deck-actions",
 			});
 
-			const studyBtn = actionsEl.createEl("button", {
-				text: "Study",
-				cls: "flashcard-btn flashcard-btn-small",
-			});
-			studyBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				void this.plugin.startReview(deck.path);
-			});
+			const studyBtnComponent = new ButtonComponent(actionsEl)
+				.setButtonText("Study")
+				.setClass("flashcard-btn-small")
+				.onClick(() => {
+					void this.plugin.startReview(deck.path);
+				});
+			// Stop propagation on the button element
+			studyBtnComponent.buttonEl.addEventListener("click", (e) => e.stopPropagation());
 
 			// Render children
 			const children = childDecks.get(deck.path);

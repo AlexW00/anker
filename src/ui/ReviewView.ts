@@ -1,4 +1,5 @@
 import {
+	ButtonComponent,
 	ItemView,
 	MarkdownRenderer,
 	TFile,
@@ -168,11 +169,11 @@ export class ReviewView extends ItemView {
 
 		if (!isLastSide) {
 			// Show "Reveal" button
-			const revealBtn = controlsContainer.createEl("button", {
-				text: "Show answer",
-				cls: "flashcard-btn flashcard-btn-reveal mod-cta",
-			});
-			revealBtn.addEventListener("click", () => this.revealNext());
+			new ButtonComponent(controlsContainer)
+				.setButtonText("Show answer")
+				.setCta()
+				.setClass("flashcard-btn-reveal")
+				.onClick(() => this.revealNext());
 
 			// Keyboard hint
 			controlsContainer.createSpan({
@@ -185,11 +186,11 @@ export class ReviewView extends ItemView {
 		}
 
 		// Edit button (always visible)
-		const editBtn = container.createEl("button", {
-			cls: "flashcard-btn flashcard-btn-edit",
-		});
-		setIcon(editBtn, "edit");
-		editBtn.addEventListener("click", () => void this.editCurrentCard());
+		new ButtonComponent(container)
+			.setIcon("edit")
+			.setTooltip("Edit card (Cmd/Ctrl + E)")
+			.setClass("flashcard-btn-edit")
+			.onClick(() => void this.editCurrentCard());
 
 		// Register keyboard shortcuts
 		this.registerKeyboardShortcuts(container);
@@ -205,61 +206,35 @@ export class ReviewView extends ItemView {
 			cls: "flashcard-rating-buttons",
 		});
 
+		// Helper to create rating button with interval
+		const createRatingButton = (
+			label: string,
+			interval: string,
+			rating: Rating,
+			className: string,
+		) => {
+			const btnWrapper = buttonsContainer.createDiv({ cls: className });
+			new ButtonComponent(btnWrapper)
+				.setButtonText(label)
+				.setClass(className)
+				.onClick(() => void this.rateCard(rating));
+			btnWrapper.createSpan({
+				text: interval,
+				cls: "flashcard-interval",
+			});
+		};
+
 		// Again button
-		const againBtn = buttonsContainer.createEl("button", {
-			cls: "flashcard-btn flashcard-btn-again",
-		});
-		againBtn.createSpan({ text: "Again" });
-		againBtn.createSpan({
-			text: nextStates.again.interval,
-			cls: "flashcard-interval",
-		});
-		againBtn.addEventListener(
-			"click",
-			() => void this.rateCard(Rating.Again),
-		);
+		createRatingButton("Again", nextStates.again.interval, Rating.Again, "flashcard-btn-again");
 
 		// Hard button
-		const hardBtn = buttonsContainer.createEl("button", {
-			cls: "flashcard-btn flashcard-btn-hard",
-		});
-		hardBtn.createSpan({ text: "Hard" });
-		hardBtn.createSpan({
-			text: nextStates.hard.interval,
-			cls: "flashcard-interval",
-		});
-		hardBtn.addEventListener(
-			"click",
-			() => void this.rateCard(Rating.Hard),
-		);
+		createRatingButton("Hard", nextStates.hard.interval, Rating.Hard, "flashcard-btn-hard");
 
 		// Good button
-		const goodBtn = buttonsContainer.createEl("button", {
-			cls: "flashcard-btn flashcard-btn-good",
-		});
-		goodBtn.createSpan({ text: "Good" });
-		goodBtn.createSpan({
-			text: nextStates.good.interval,
-			cls: "flashcard-interval",
-		});
-		goodBtn.addEventListener(
-			"click",
-			() => void this.rateCard(Rating.Good),
-		);
+		createRatingButton("Good", nextStates.good.interval, Rating.Good, "flashcard-btn-good");
 
 		// Easy button
-		const easyBtn = buttonsContainer.createEl("button", {
-			cls: "flashcard-btn flashcard-btn-easy",
-		});
-		easyBtn.createSpan({ text: "Easy" });
-		easyBtn.createSpan({
-			text: nextStates.easy.interval,
-			cls: "flashcard-interval",
-		});
-		easyBtn.addEventListener(
-			"click",
-			() => void this.rateCard(Rating.Easy),
-		);
+		createRatingButton("Easy", nextStates.easy.interval, Rating.Easy, "flashcard-btn-easy");
 
 		// Keyboard hints
 		const hintsEl = container.createDiv({ cls: "flashcard-rating-hints" });
@@ -393,13 +368,12 @@ export class ReviewView extends ItemView {
 			text: "You've reviewed all due cards in this deck.",
 		});
 
-		const backBtn = completeState.createEl("button", {
-			text: "Back to dashboard",
-			cls: "mod-cta",
-		});
-		backBtn.addEventListener("click", () => {
-			void this.plugin.openDashboard();
-		});
+		new ButtonComponent(completeState)
+			.setButtonText("Back to dashboard")
+			.setCta()
+			.onClick(() => {
+				void this.plugin.openDashboard();
+			});
 
 		this.session = null;
 	}

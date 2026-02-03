@@ -101,28 +101,11 @@
 	margin-bottom: var(--size-4-2);
 }
 
-/* Buttons */
-.flashcard-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--size-4-1);
-	padding: var(--size-4-1) var(--size-4-3);
-	border-radius: var(--radius-s);
-	background: var(--interactive-normal);
-	color: var(--text-normal);
-	cursor: pointer;
-	border: 1px solid var(--background-modifier-border);
-	font-size: var(--font-ui-small);
-	transition: background 0.1s ease;
-}
-
-.flashcard-btn:hover {
-	background: var(--interactive-hover);
-}
-
+/* Buttons - using native Obsidian ButtonComponent styling */
+/* Small button modifier for deck actions */
 .flashcard-btn-small {
-	padding: var(--size-2-1) var(--size-4-2);
-	font-size: var(--font-ui-smaller);
+	padding: var(--size-2-1) var(--size-4-2) !important;
+	font-size: var(--font-ui-smaller) !important;
 }
 
 /* Review View */
@@ -201,8 +184,8 @@
 }
 
 .flashcard-btn-reveal {
-	padding: var(--size-4-3) var(--size-4-6);
-	font-size: var(--font-ui-medium);
+	padding: var(--size-4-3) var(--size-4-6) !important;
+	font-size: var(--font-ui-medium) !important;
 }
 
 .flashcard-hint {
@@ -218,9 +201,14 @@
 	justify-content: center;
 }
 
-.flashcard-rating-buttons .flashcard-btn {
+.flashcard-rating-buttons > div {
+	display: flex;
 	flex-direction: column;
-	padding: var(--size-4-2) var(--size-4-4);
+	align-items: center;
+	gap: var(--size-2-1);
+}
+
+.flashcard-rating-buttons button {
 	min-width: 70px;
 }
 
@@ -230,35 +218,35 @@
 	margin-top: var(--size-2-1);
 }
 
-.flashcard-btn-again {
+.flashcard-btn-again button {
 	border-color: var(--color-red);
 }
 
-.flashcard-btn-again:hover {
+.flashcard-btn-again button:hover {
 	background: hsla(var(--color-red-hsl), 0.2);
 }
 
-.flashcard-btn-hard {
+.flashcard-btn-hard button {
 	border-color: var(--color-orange);
 }
 
-.flashcard-btn-hard:hover {
+.flashcard-btn-hard button:hover {
 	background: hsla(var(--color-orange-hsl), 0.2);
 }
 
-.flashcard-btn-good {
+.flashcard-btn-good button {
 	border-color: var(--color-green);
 }
 
-.flashcard-btn-good:hover {
+.flashcard-btn-good button:hover {
 	background: hsla(var(--color-green-hsl), 0.2);
 }
 
-.flashcard-btn-easy {
+.flashcard-btn-easy button {
 	border-color: var(--color-blue);
 }
 
-.flashcard-btn-easy:hover {
+.flashcard-btn-easy button:hover {
 	background: hsla(var(--color-blue-hsl), 0.2);
 }
 
@@ -269,20 +257,16 @@
 	color: var(--text-faint);
 }
 
-/* Edit button */
+/* Edit button - uses clickable-icon pattern */
 .flashcard-btn-edit {
 	position: absolute;
 	top: var(--size-4-4);
 	right: var(--size-4-4);
-	background: transparent;
-	border: none;
-	color: var(--text-muted);
-	cursor: pointer;
-	padding: var(--size-4-1);
 }
 
-.flashcard-btn-edit:hover {
-	color: var(--text-normal);
+.flashcard-btn-edit.clickable-icon {
+	background: transparent;
+	border: none;
 }
 
 /* Complete State */
