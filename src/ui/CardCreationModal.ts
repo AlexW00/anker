@@ -114,9 +114,8 @@ class DeckPathSuggest extends AbstractInputSuggest<DeckSearchOption> {
 			text: option.path,
 			cls: "suggestion-title",
 		});
-		const cardLabel = option.cardCount === 1
-			? "1 card"
-			: `${option.cardCount} cards`;
+		const cardLabel =
+			option.cardCount === 1 ? "1 card" : `${option.cardCount} cards`;
 		el.createEl("div", {
 			text: cardLabel,
 			cls: "suggestion-note flashcard-deck-suggest-note",
