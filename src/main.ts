@@ -1,20 +1,28 @@
 import { Editor, MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { FlashcardsSettingTab } from "./settings";
-import { DEFAULT_SETTINGS, type FlashcardsPluginSettings } from "./types";
+import {
+	DEFAULT_SETTINGS,
+	DEFAULT_STATE,
+	type FlashcardsPluginSettings,
+	type FlashcardsPluginState,
+} from "./types";
 import { TemplateService } from "./flashcards/TemplateService";
 import { CardService } from "./flashcards/CardService";
 import { DeckService } from "./flashcards/DeckService";
 import { Scheduler } from "./srs/Scheduler";
 import { CardRegenService } from "./services/CardRegenService";
+import { AttachmentCleanupService } from "./services/AttachmentCleanupService";
 import { DashboardView, DASHBOARD_VIEW_TYPE } from "./ui/DashboardView";
 import { ReviewView, REVIEW_VIEW_TYPE } from "./ui/ReviewView";
 import { DeckSelectorModal } from "./ui/DeckSelectorModal";
 import { TemplateSelectorModal } from "./ui/TemplateSelectorModal";
 import { TemplateNameModal } from "./ui/TemplateNameModal";
 import { showCardCreationModal } from "./ui/CardCreationFlow";
+import { OrphanAttachmentsModal } from "./ui/OrphanAttachmentsModal";
 
 export default class FlashcardsPlugin extends Plugin {
 	settings: FlashcardsPluginSettings;
+	state: FlashcardsPluginState;
 	templateService: TemplateService;
 	cardService: CardService;
 	deckService: DeckService;
@@ -24,6 +32,8 @@ export default class FlashcardsPlugin extends Plugin {
 	private statusBarItem: HTMLElement | null = null;
 	/** Service for auto-regeneration and template watching */
 	private cardRegenService: CardRegenService | null = null;
+	/** Service for finding and deleting unused attachments */
+	private attachmentCleanupService: AttachmentCleanupService | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -39,6 +49,7 @@ export default class FlashcardsPlugin extends Plugin {
 		this.cardService = new CardService(this.app, this.templateService);
 		this.deckService = new DeckService(this.app);
 		this.scheduler = new Scheduler();
+		this.attachmentCleanupService = new AttachmentCleanupService(this.app);
 
 		// Initialize card regeneration service
 		this.cardRegenService = new CardRegenService({
@@ -124,17 +135,34 @@ export default class FlashcardsPlugin extends Plugin {
 	}
 
 	async loadSettings() {
+		type FlashcardsPluginData = {
+			settings?: Partial<FlashcardsPluginSettings>;
+			state?: Partial<FlashcardsPluginState>;
+		};
+
+		const data = (await this.loadData()) as FlashcardsPluginData | null;
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<FlashcardsPluginSettings> | null,
+			data?.settings ?? {},
 		);
+		this.state = Object.assign({}, DEFAULT_STATE, data?.state ?? {});
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		await this.saveData({
+			settings: this.settings,
+			state: this.state,
+		});
 		// Update settings in dependent services
 		this.cardRegenService?.updateSettings(this.settings);
+	}
+
+	async saveState() {
+		await this.saveData({
+			settings: this.settings,
+			state: this.state,
+		});
 	}
 
 	/**
@@ -184,6 +212,12 @@ export default class FlashcardsPlugin extends Plugin {
 			id: "regenerate-all-from-template",
 			name: "Regenerate all cards from template",
 			callback: () => this.selectTemplateForRegeneration(),
+		});
+
+		this.addCommand({
+			id: "delete-unused-attachments",
+			name: "Delete unused attachments",
+			callback: () => this.deleteUnusedAttachments(),
 		});
 	}
 
@@ -253,7 +287,8 @@ export default class FlashcardsPlugin extends Plugin {
 			this.deckService,
 			this.templateService,
 			this.settings,
-			() => this.saveSettings(),
+			this.state,
+			() => this.saveState(),
 		);
 	}
 
@@ -311,5 +346,43 @@ export default class FlashcardsPlugin extends Plugin {
 					);
 				}).open();
 			});
+	}
+
+	/**
+	 * Find and delete unused attachments in the configured attachment folder.
+	 */
+	private async deleteUnusedAttachments() {
+		if (!this.attachmentCleanupService) {
+			new Notice("Attachment cleanup service not available");
+			return;
+		}
+
+		const attachmentFolder = this.settings.attachmentFolder;
+		let orphans: TFile[] = [];
+		try {
+			orphans = await this.attachmentCleanupService.findOrphanAttachments(
+				attachmentFolder,
+			);
+		} catch (error) {
+			console.error("Failed to scan attachments", error);
+			new Notice("Failed to scan attachments");
+			return;
+		}
+
+		if (orphans.length === 0) {
+			new Notice("No unused attachments found");
+			return;
+		}
+
+		new OrphanAttachmentsModal(
+			this.app,
+			orphans,
+			attachmentFolder,
+			async () => {
+				for (const file of orphans) {
+					await this.app.vault.delete(file);
+				}
+			},
+		).open();
 	}
 }

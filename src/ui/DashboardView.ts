@@ -19,6 +19,7 @@ export class DashboardView extends ItemView {
 	plugin: FlashcardsPlugin;
 	private debouncedRender: () => void;
 	private deckBaseViewService: DeckBaseViewService;
+	private collapsedDeckPaths = new Set<string>();
 
 	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
 		super(leaf);
@@ -127,30 +128,64 @@ export class DashboardView extends ItemView {
 			}
 		}
 
-		const renderDeck = (deck: Deck, depth: number = 0) => {
-			const deckEl = container.createDiv({ cls: "flashcard-deck-item" });
+		const renderDeck = (
+			deck: Deck,
+			depth: number,
+			parent: HTMLElement,
+		) => {
+			const deckEl = parent.createDiv({ cls: "flashcard-deck-item" });
 			deckEl.style.paddingLeft = `${depth * 20}px`;
+
+			const children = childDecks.get(deck.path) ?? [];
+			const hasChildren = children.length > 0;
+			const isCollapsed = hasChildren
+				? this.collapsedDeckPaths.has(deck.path)
+				: false;
 
 			// Deck info
 			const infoEl = deckEl.createDiv({ cls: "flashcard-deck-info" });
 
-			const nameEl = infoEl.createSpan({
-				cls: "flashcard-deck-name flashcard-deck-name-link",
+			const nameEl = infoEl.createSpan({ cls: "flashcard-deck-name" });
+			const iconEl = nameEl.createSpan({
+				cls: "flashcard-deck-toggle",
 			});
-			setIcon(nameEl, "folder");
-			nameEl.createSpan({ text: ` ${deck.name}` });
-			nameEl.setAttr("role", "button");
-			nameEl.setAttr("tabindex", "0");
-			nameEl.setAttr("title", "View cards in deck");
-			nameEl.setAttr("aria-label", "View cards in deck");
-			nameEl.addEventListener("click", (event) => {
+			setIcon(
+				iconEl,
+				hasChildren
+					? isCollapsed
+						? "folder-closed"
+						: "folder-open"
+					: "folder",
+			);
+			if (hasChildren) {
+				iconEl.setAttr("role", "button");
+				iconEl.setAttr("tabindex", "0");
+				iconEl.setAttr("aria-expanded", String(!isCollapsed));
+				iconEl.setAttr(
+					"aria-label",
+					isCollapsed ? "Expand deck" : "Collapse deck",
+				);
+			} else {
+				iconEl.addClass("flashcard-deck-toggle-disabled");
+				iconEl.setAttr("aria-hidden", "true");
+			}
+
+			const linkEl = nameEl.createSpan({
+				cls: "flashcard-deck-name-link",
+				text: deck.name,
+			});
+			linkEl.setAttr("role", "button");
+			linkEl.setAttr("tabindex", "0");
+			linkEl.setAttr("title", "View cards in deck");
+			linkEl.setAttr("aria-label", "View cards in deck");
+			linkEl.addEventListener("click", (event) => {
 				event.stopPropagation();
 				void this.deckBaseViewService.openDeckBaseView(
 					deck.path,
 					deck.name,
 				);
 			});
-			nameEl.addEventListener("keydown", (event) => {
+			linkEl.addEventListener("keydown", (event) => {
 				if (event.key === "Enter" || event.key === " ") {
 					event.preventDefault();
 					void this.deckBaseViewService.openDeckBaseView(
@@ -159,6 +194,41 @@ export class DashboardView extends ItemView {
 					);
 				}
 			});
+
+			let childrenEl: HTMLDivElement | null = null;
+			const updateCollapseState = (collapsed: boolean) => {
+				if (!hasChildren) return;
+				if (collapsed) {
+					this.collapsedDeckPaths.add(deck.path);
+				} else {
+					this.collapsedDeckPaths.delete(deck.path);
+				}
+				setIcon(iconEl, collapsed ? "folder-closed" : "folder-open");
+				iconEl.setAttr("aria-expanded", String(!collapsed));
+				iconEl.setAttr(
+					"aria-label",
+					collapsed ? "Expand deck" : "Collapse deck",
+				);
+				if (childrenEl) {
+					childrenEl.style.display = collapsed ? "none" : "";
+				}
+			};
+
+			if (hasChildren) {
+				const handleToggle = (event: Event) => {
+					event.stopPropagation();
+					updateCollapseState(
+						!this.collapsedDeckPaths.has(deck.path),
+					);
+				};
+				iconEl.addEventListener("click", handleToggle);
+				iconEl.addEventListener("keydown", (event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						handleToggle(event);
+					}
+				});
+			}
 			const statsEl = infoEl.createDiv({ cls: "flashcard-deck-stats" });
 
 			// Helper to create clickable stat badges
@@ -234,16 +304,19 @@ export class DashboardView extends ItemView {
 			);
 
 			// Render children
-			const children = childDecks.get(deck.path);
-			if (children) {
+			if (hasChildren) {
+				childrenEl = parent.createDiv({
+					cls: "flashcard-deck-children",
+				});
+				childrenEl.style.display = isCollapsed ? "none" : "";
 				for (const child of children) {
-					renderDeck(child, depth + 1);
+					renderDeck(child, depth + 1, childrenEl);
 				}
 			}
 		};
 
 		for (const deck of rootDecks) {
-			renderDeck(deck);
+			renderDeck(deck, 0, container);
 		}
 	}
 
@@ -255,7 +328,8 @@ export class DashboardView extends ItemView {
 			this.plugin.deckService,
 			this.plugin.templateService,
 			this.plugin.settings,
-			() => this.plugin.saveSettings(),
+			this.plugin.state,
+			() => this.plugin.saveState(),
 			{ onRefresh: () => this.render() },
 		);
 	}

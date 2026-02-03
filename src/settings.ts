@@ -21,34 +21,35 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName("Flashcards").setHeading();
-
-		new Setting(containerEl)
-			.setName("Open card after creation")
-			.setDesc(
-				"When enabled, the newly created card will be opened in the editor. Does not apply when creating multiple cards.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.openCardAfterCreation)
-					.onChange(async (value) => {
-						this.plugin.settings.openCardAfterCreation = value;
-						await this.plugin.saveSettings();
-					}),
-			);
+		new Setting(containerEl).setName("Storage").setHeading();
 
 		new Setting(containerEl)
 			.setName("Template folder")
-			.setDesc("Folder containing your flashcard templates")
+			.setDesc("Folder for flashcard templates")
 			.addText((text) =>
 				text
-					.setPlaceholder("Path/to/templates")
+					.setPlaceholder("Flashcards/Templates")
 					.setValue(this.plugin.settings.templateFolder)
 					.onChange(async (value) => {
-						this.plugin.settings.templateFolder = value;
+						this.plugin.settings.templateFolder = value.trim();
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName("Attachment folder")
+			.setDesc("Folder for pasted images and media")
+			.addText((text) =>
+				text
+					.setPlaceholder("Flashcards/Attachments")
+					.setValue(this.plugin.settings.attachmentFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.attachmentFolder = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl).setName("Card creation").setHeading();
 
 		new Setting(containerEl)
 			.setName("Note name template")
@@ -60,22 +61,7 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 					.setPlaceholder("{{timestamp}}")
 					.setValue(this.plugin.settings.noteNameTemplate)
 					.onChange(async (value) => {
-						this.plugin.settings.noteNameTemplate = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName("Attachment folder")
-			.setDesc(
-				"Folder for storing pasted or uploaded media files (images, audio, video). Relative to vault root.",
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("Attachments")
-					.setValue(this.plugin.settings.attachmentFolder)
-					.onChange(async (value) => {
-						this.plugin.settings.attachmentFolder = value;
+						this.plugin.settings.noteNameTemplate = value.trim();
 						await this.plugin.saveSettings();
 					}),
 			);
@@ -97,7 +83,6 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 				text.inputEl.addClass("flashcard-settings-template-textarea");
 			});
 
-		// Reset to default button
 		new Setting(containerEl)
 			.setName("Reset default template")
 			.setDesc(
@@ -108,30 +93,44 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultTemplateContent =
 						DEFAULT_BASIC_TEMPLATE;
 					await this.plugin.saveSettings();
-					this.display(); // Refresh to show reset value
+					this.display();
 				}),
 			);
 
-		new Setting(containerEl).setName("Deck view").setHeading();
-
 		new Setting(containerEl)
-			.setName("Columns")
+			.setName("Open card after creation")
 			.setDesc(
-				"Select which columns to display when viewing a deck. Drag to reorder.",
+				"When enabled, the newly created card will be opened in the editor. Does not apply when creating multiple cards.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.openCardAfterCreation)
+					.onChange(async (value) => {
+						this.plugin.settings.openCardAfterCreation = value;
+						await this.plugin.saveSettings();
+					}),
 			);
-
-		// Create a container for the column toggles
-		const columnsContainer = containerEl.createDiv({
-			cls: "flashcard-settings-columns",
-		});
-		this.renderColumnSettings(columnsContainer);
 
 		new Setting(containerEl).setName("Review").setHeading();
 
 		new Setting(containerEl)
+			.setName("Show only current side")
+			.setDesc(
+				"When enabled, only the current side is shown during review. When disabled, all sides up to the current one are shown.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showOnlyCurrentSide)
+					.onChange(async (value) => {
+						this.plugin.settings.showOnlyCurrentSide = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Auto-regenerate debounce")
 			.setDesc(
-				"Seconds to wait before auto-regenerating cards after edits (frontmatter or template changes). Set to 0 to disable auto-regeneration.",
+				"Delay before regenerating cards after edits (0 to disable).",
 			)
 			.addText((text) =>
 				text
@@ -148,19 +147,16 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		new Setting(containerEl).setName("Deck view").setHeading();
+
 		new Setting(containerEl)
-			.setName("Show only current side")
+			.setName("Columns")
 			.setDesc(
-				"When enabled, only the current side is shown during review. When disabled, all sides up to the current one are shown.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.showOnlyCurrentSide)
-					.onChange(async (value) => {
-						this.plugin.settings.showOnlyCurrentSide = value;
-						await this.plugin.saveSettings();
-					}),
+				"Select which columns to display when viewing a deck. Column order is fixed.",
 			);
+
+		const columnsContainer = containerEl.createDiv();
+		this.renderColumnSettings(columnsContainer);
 	}
 
 	/**
@@ -192,16 +188,6 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 				);
-		}
-
-		// Show current order of selected columns
-		if (selectedColumns.length > 0) {
-			const orderInfo = container.createDiv({
-				cls: "flashcard-settings-column-order",
-			});
-			orderInfo.createEl("small", {
-				text: `Column order: ${selectedColumns.map((c) => DECK_VIEW_COLUMN_LABELS[c]).join(" → ")}`,
-			});
 		}
 	}
 }

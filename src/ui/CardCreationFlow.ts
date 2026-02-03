@@ -1,5 +1,9 @@
 import { App, Notice } from "obsidian";
-import type { FlashcardTemplate, FlashcardsPluginSettings } from "../types";
+import type {
+	FlashcardTemplate,
+	FlashcardsPluginSettings,
+	FlashcardsPluginState,
+} from "../types";
 import type { CardService } from "../flashcards/CardService";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
@@ -23,7 +27,8 @@ export function showCardCreationModal(
 	deckService: DeckService,
 	templateService: TemplateService,
 	settings: FlashcardsPluginSettings,
-	saveSettings: () => Promise<void>,
+	state: FlashcardsPluginState,
+	saveState: () => Promise<void>,
 	callbacks?: CardCreationCallbacks,
 	/** Optional initial deck path override */
 	initialDeckPath?: string,
@@ -34,7 +39,10 @@ export function showCardCreationModal(
 		app,
 		deckService,
 		templateService,
-		settings,
+		templateFolder: settings.templateFolder,
+		attachmentFolder: settings.attachmentFolder,
+		lastUsedDeck: state.lastUsedDeck,
+		lastUsedTemplate: state.lastUsedTemplate,
 		initialDeckPath,
 		initialTemplate,
 		onSubmit: (fields, deckPath, templatePath, createAnother) => {
@@ -49,9 +57,9 @@ export function showCardCreationModal(
 					new Notice("Card created!");
 
 					// Update last used deck and template
-					settings.lastUsedDeck = deckPath;
-					settings.lastUsedTemplate = templatePath;
-					await saveSettings();
+					state.lastUsedDeck = deckPath;
+					state.lastUsedTemplate = templatePath;
+					await saveState();
 
 					// Refresh dashboard if callback provided
 					if (callbacks?.onRefresh) {

@@ -6,11 +6,7 @@ import {
 	Notice,
 	setIcon,
 } from "obsidian";
-import type {
-	Deck,
-	FlashcardTemplate,
-	FlashcardsPluginSettings,
-} from "../types";
+import type { Deck, FlashcardTemplate } from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
@@ -38,16 +34,19 @@ export interface CardCreationModalOptions {
 	app: App;
 	deckService: DeckService;
 	templateService: TemplateService;
-	settings: FlashcardsPluginSettings;
+	templateFolder: string;
+	attachmentFolder: string;
+	lastUsedDeck?: string;
+	lastUsedTemplate?: string;
 	onSubmit: (
 		fields: Record<string, string>,
 		deckPath: string,
 		templatePath: string,
 		createAnother: boolean,
 	) => void;
-	/** Initial deck path (optional, uses lastUsedDeck or first available) */
+	/** Initial deck path (optional, uses last used or first available) */
 	initialDeckPath?: string;
-	/** Initial template (optional, uses lastUsedTemplate or first available) */
+	/** Initial template (optional, uses last used or first available) */
 	initialTemplate?: FlashcardTemplate;
 }
 
@@ -58,7 +57,10 @@ export interface CardCreationModalOptions {
 export class CardCreationModal extends Modal {
 	private deckService: DeckService;
 	private templateService: TemplateService;
-	private settings: FlashcardsPluginSettings;
+	private templateFolder: string;
+	private attachmentFolder: string;
+	private lastUsedDeck?: string;
+	private lastUsedTemplate?: string;
 	private onSubmit: CardCreationModalOptions["onSubmit"];
 
 	private currentDeckPath: string;
@@ -73,7 +75,10 @@ export class CardCreationModal extends Modal {
 		super(options.app);
 		this.deckService = options.deckService;
 		this.templateService = options.templateService;
-		this.settings = options.settings;
+		this.templateFolder = options.templateFolder;
+		this.attachmentFolder = options.attachmentFolder;
+		this.lastUsedDeck = options.lastUsedDeck;
+		this.lastUsedTemplate = options.lastUsedTemplate;
 		this.onSubmit = options.onSubmit;
 
 		// Will be set in onOpen after loading available options
@@ -94,13 +99,13 @@ export class CardCreationModal extends Modal {
 		// Load available decks and templates
 		this.availableDecks = this.deckService.discoverDecks();
 		this.availableTemplates = await this.templateService.getTemplates(
-			this.settings.templateFolder,
+			this.templateFolder,
 		);
 
 		// Handle no templates case
 		if (this.availableTemplates.length === 0) {
 			new Notice(
-				`No templates found in "${this.settings.templateFolder}". Please create a template first.`,
+				`No templates found in "${this.templateFolder}". Please create a template first.`,
 			);
 			this.close();
 			return;
@@ -108,14 +113,14 @@ export class CardCreationModal extends Modal {
 
 		// Determine initial deck path
 		if (!this.currentDeckPath) {
-			// Priority: lastUsedDeck -> first available deck -> vault root
+			// Priority: last used deck -> first available deck -> vault root
 			if (
-				this.settings.lastUsedDeck &&
+				this.lastUsedDeck &&
 				this.availableDecks.some(
-					(d) => d.path === this.settings.lastUsedDeck,
+					(d) => d.path === this.lastUsedDeck,
 				)
 			) {
-				this.currentDeckPath = this.settings.lastUsedDeck;
+				this.currentDeckPath = this.lastUsedDeck;
 			} else if (this.availableDecks.length > 0) {
 				this.currentDeckPath = this.availableDecks[0]?.path ?? "/";
 			} else {
@@ -125,9 +130,9 @@ export class CardCreationModal extends Modal {
 
 		// Determine initial template
 		if (!this.currentTemplate.path) {
-			// Priority: lastUsedTemplate -> first available template
+			// Priority: last used template -> first available template
 			const lastTemplate = this.availableTemplates.find(
-				(t) => t.path === this.settings.lastUsedTemplate,
+				(t) => t.path === this.lastUsedTemplate,
 			);
 			this.currentTemplate =
 				lastTemplate ??
@@ -419,7 +424,7 @@ export class CardCreationModal extends Modal {
 		const buffer = await file.arrayBuffer();
 		const extension = file.name.split(".").pop() || "bin";
 		const filename = `${generateUUID()}.${extension}`;
-		const attachmentFolder = this.settings.attachmentFolder;
+		const attachmentFolder = this.attachmentFolder;
 		const path = `${attachmentFolder}/${filename}`;
 
 		// Ensure attachment folder exists
@@ -481,7 +486,7 @@ export class CardCreationModal extends Modal {
 					const buffer = await blob.arrayBuffer();
 					const extension = this.getExtensionForPaste(blob, mimeType);
 					const filename = `${generateUUID()}.${extension}`;
-					const attachmentFolder = this.settings.attachmentFolder;
+					const attachmentFolder = this.attachmentFolder;
 					const path = `${attachmentFolder}/${filename}`;
 
 					// Ensure attachment folder exists

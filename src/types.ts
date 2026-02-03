@@ -159,10 +159,6 @@ export interface FlashcardsPluginSettings {
 	templateFolder: string;
 	/** Template for flashcard note names. Supports {{date}}, {{time}}, {{timestamp}} */
 	noteNameTemplate: string;
-	/** Last used deck path for quick access */
-	lastUsedDeck: string;
-	/** Last used template path for quick access */
-	lastUsedTemplate: string;
 	/** Default template content used when creating new templates */
 	defaultTemplateContent: string;
 	/** Seconds to wait before auto-regenerating after edits (cards or templates). Set to 0 to disable. */
@@ -175,6 +171,16 @@ export interface FlashcardsPluginSettings {
 	openCardAfterCreation: boolean;
 	/** Folder path for storing pasted/uploaded media attachments. Relative to vault root. */
 	attachmentFolder: string;
+}
+
+/**
+ * Plugin state that should persist but is not user-configurable.
+ */
+export interface FlashcardsPluginState {
+	/** Last used deck path for quick access */
+	lastUsedDeck: string;
+	/** Last used template path for quick access */
+	lastUsedTemplate: string;
 }
 
 /** Default basic template content */
@@ -223,10 +229,8 @@ For more information, see the plugin documentation.
 `;
 
 export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
-	templateFolder: "Templates/Flashcards",
+	templateFolder: "Flashcards/Templates",
 	noteNameTemplate: "{{timestamp}}",
-	lastUsedDeck: "",
-	lastUsedTemplate: "",
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
 	autoRegenerateDebounce: 1,
 	showOnlyCurrentSide: false,
@@ -241,7 +245,12 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 		"lapses",
 	],
 	openCardAfterCreation: true,
-	attachmentFolder: "Attachments",
+	attachmentFolder: "Flashcards/Attachments",
+};
+
+export const DEFAULT_STATE: FlashcardsPluginState = {
+	lastUsedDeck: "",
+	lastUsedTemplate: "",
 };
 
 /**

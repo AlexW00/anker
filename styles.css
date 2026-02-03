@@ -63,6 +63,33 @@
 	font-weight: var(--font-medium);
 }
 
+.flashcard-deck-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+}
+
+.flashcard-deck-toggle:hover {
+	color: var(--text-accent);
+}
+
+.flashcard-deck-toggle:focus-visible {
+	outline: 2px solid var(--background-modifier-border-focus);
+	outline-offset: 2px;
+	border-radius: var(--radius-s);
+}
+
+.flashcard-deck-toggle-disabled {
+	cursor: default;
+	color: var(--text-faint);
+}
+
+.flashcard-deck-toggle-disabled:hover {
+	color: var(--text-faint);
+}
+
 .flashcard-deck-name-link {
 	cursor: pointer;
 	text-decoration: none;
@@ -131,10 +158,14 @@
 	text-align: center;
 	padding: var(--size-4-8);
 	color: var(--text-muted);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--size-4-4);
 }
 
 .flashcard-empty-state p {
-	margin-bottom: var(--size-4-2);
+	margin: 0;
 }
 
 /* Buttons - using native Obsidian ButtonComponent styling */
@@ -351,6 +382,37 @@
 /* Card Creation Modal */
 .flashcard-creation-modal {
 	min-width: 500px;
+}
+
+.flashcard-orphan-modal {
+	width: 100%;
+	max-width: 620px;
+}
+
+.flashcard-orphan-list {
+	max-height: 300px;
+	overflow: auto;
+	margin: var(--size-4-2) 0;
+	padding: var(--size-2-2) var(--size-4-4) var(--size-2-2)
+		var(--size-4-6);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	box-sizing: border-box;
+}
+
+.flashcard-orphan-list li {
+	margin: var(--size-2-1) 0;
+	color: var(--text-normal);
+}
+
+.flashcard-orphan-link {
+	color: var(--text-accent);
+	text-decoration: none;
+}
+
+.flashcard-orphan-link:hover {
+	text-decoration: underline;
 }
 
 /* Template name modal */
