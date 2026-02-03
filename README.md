@@ -103,3 +103,5 @@
 - Update Dashboard so that:
     - folders can be collapsed/expanded
     - gray bg of folder items is gone
+- add regenerate all cards from template option as command
+- when editing a template, offer to regenerate all cards that use that template (as an obsidian toast)

@@ -74,6 +74,52 @@ export interface FlashcardTemplate {
 }
 
 /**
+ * Available columns for deck base view.
+ */
+export type DeckViewColumn =
+	| "file.name"
+	| "template"
+	| "state"
+	| "due"
+	| "stability"
+	| "difficulty"
+	| "reps"
+	| "lapses"
+	| "last_review"
+	| "scheduled_days"
+	| "elapsed_days";
+
+/** Human-readable labels for deck view columns */
+export const DECK_VIEW_COLUMN_LABELS: Record<DeckViewColumn, string> = {
+	"file.name": "File Name",
+	template: "Template",
+	state: "State",
+	due: "Due",
+	stability: "Stability",
+	difficulty: "Difficulty",
+	reps: "Repetitions",
+	lapses: "Lapses",
+	last_review: "Last Review",
+	scheduled_days: "Scheduled Days",
+	elapsed_days: "Elapsed Days",
+};
+
+/** All available deck view columns */
+export const ALL_DECK_VIEW_COLUMNS: DeckViewColumn[] = [
+	"file.name",
+	"template",
+	"state",
+	"due",
+	"stability",
+	"difficulty",
+	"reps",
+	"lapses",
+	"last_review",
+	"scheduled_days",
+	"elapsed_days",
+];
+
+/**
  * Plugin settings interface.
  */
 export interface FlashcardsPluginSettings {
@@ -85,8 +131,12 @@ export interface FlashcardsPluginSettings {
 	lastUsedDeck: string;
 	/** Default template content used when creating new templates */
 	defaultTemplateContent: string;
+	/** Seconds to wait before auto-regenerating after frontmatter edits */
+	autoRegenerateDebounce: number;
 	/** If true, only show the current side during review. If false, show all sides up to the current one. */
 	showOnlyCurrentSide: boolean;
+	/** Columns to display in deck base view */
+	deckViewColumns: DeckViewColumn[];
 }
 
 /** Default basic template content */
@@ -139,7 +189,9 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	noteNameTemplate: "{{timestamp}}",
 	lastUsedDeck: "",
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
+	autoRegenerateDebounce: 1,
 	showOnlyCurrentSide: false,
+	deckViewColumns: ["file.name", "template", "state", "due", "reps", "lapses"],
 };
 
 /**

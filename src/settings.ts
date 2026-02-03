@@ -1,6 +1,10 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import type { PluginWithSettings } from "./types";
-import { DEFAULT_BASIC_TEMPLATE } from "./types";
+import {
+	ALL_DECK_VIEW_COLUMNS,
+	DECK_VIEW_COLUMN_LABELS,
+	DEFAULT_BASIC_TEMPLATE,
+} from "./types";
 
 export { DEFAULT_SETTINGS } from "./types";
 export type { FlashcardsPluginSettings } from "./types";
@@ -79,7 +83,41 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 				}),
 			);
 
+		new Setting(containerEl).setName("Deck view").setHeading();
+
+		new Setting(containerEl)
+			.setName("Columns")
+			.setDesc(
+				"Select which columns to display when viewing a deck. Drag to reorder.",
+			);
+
+		// Create a container for the column toggles
+		const columnsContainer = containerEl.createDiv({
+			cls: "flashcard-settings-columns",
+		});
+		this.renderColumnSettings(columnsContainer);
+
 		new Setting(containerEl).setName("Review").setHeading();
+
+		new Setting(containerEl)
+			.setName("Auto-regenerate debounce")
+			.setDesc(
+				"Seconds to wait before auto-regenerating a card after its frontmatter is edited. Set to 0 to disable auto-regeneration.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("1")
+					.setValue(
+						String(this.plugin.settings.autoRegenerateDebounce),
+					)
+					.onChange(async (value) => {
+						const num = parseFloat(value);
+						if (!isNaN(num) && num >= 0) {
+							this.plugin.settings.autoRegenerateDebounce = num;
+							await this.plugin.saveSettings();
+						}
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("Show only current side")
@@ -94,5 +132,47 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
+
+	/**
+	 * Render the column toggle settings with drag-to-reorder support.
+	 */
+	private renderColumnSettings(container: HTMLElement): void {
+		container.empty();
+
+		const selectedColumns = this.plugin.settings.deckViewColumns;
+
+		// Render each column as a toggle in order
+		for (const column of ALL_DECK_VIEW_COLUMNS) {
+			const isSelected = selectedColumns.includes(column);
+
+			new Setting(container)
+				.setName(DECK_VIEW_COLUMN_LABELS[column])
+				.addToggle((toggle) =>
+					toggle.setValue(isSelected).onChange(async (value) => {
+						if (value) {
+							// Add column to end of list
+							this.plugin.settings.deckViewColumns.push(column);
+						} else {
+							// Remove column from list
+							this.plugin.settings.deckViewColumns =
+								this.plugin.settings.deckViewColumns.filter(
+									(c) => c !== column,
+								);
+						}
+						await this.plugin.saveSettings();
+					}),
+				);
+		}
+
+		// Show current order of selected columns
+		if (selectedColumns.length > 0) {
+			const orderInfo = container.createDiv({
+				cls: "flashcard-settings-column-order",
+			});
+			orderInfo.createEl("small", {
+				text: `Column order: ${selectedColumns.map((c) => DECK_VIEW_COLUMN_LABELS[c]).join(" → ")}`,
+			});
+		}
 	}
 }

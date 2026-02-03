@@ -19,8 +19,19 @@ export default class FlashcardsPlugin extends Plugin {
 	deckService: DeckService;
 	scheduler: Scheduler;
 
+	/** Debounce timers for auto-regeneration, keyed by file path */
+	private autoRegenerateTimers: Map<string, ReturnType<typeof setTimeout>> =
+		new Map();
+	/** Cache of frontmatter fields to detect changes */
+	private frontmatterCache: Map<string, string> = new Map();
+	/** Status bar item for showing regeneration status */
+	private statusBarItem: HTMLElement | null = null;
+
 	async onload() {
 		await this.loadSettings();
+
+		// Add status bar item
+		this.statusBarItem = this.addStatusBarItem();
 
 		// Initialize services
 		this.templateService = new TemplateService(
@@ -46,6 +57,13 @@ export default class FlashcardsPlugin extends Plugin {
 		this.registerView(
 			REVIEW_VIEW_TYPE,
 			(leaf) => new ReviewView(leaf, this),
+		);
+
+		// Register auto-regenerate listener for frontmatter changes
+		this.registerEvent(
+			this.app.metadataCache.on("changed", (file) => {
+				this.handleMetadataChange(file);
+			}),
 		);
 
 		// Add ribbon icon
@@ -98,6 +116,12 @@ export default class FlashcardsPlugin extends Plugin {
 	}
 
 	onunload() {
+		// Clean up auto-regenerate timers
+		for (const timer of this.autoRegenerateTimers.values()) {
+			clearTimeout(timer);
+		}
+		this.autoRegenerateTimers.clear();
+		this.frontmatterCache.clear();
 		// Views are automatically cleaned up
 	}
 
@@ -111,6 +135,81 @@ export default class FlashcardsPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	/**
+	 * Handle metadata cache changes for auto-regeneration.
+	 * Only triggers regeneration when flashcard fields change.
+	 */
+	private handleMetadataChange(file: TFile): void {
+		// Skip if auto-regenerate is disabled
+		if (this.settings.autoRegenerateDebounce <= 0) {
+			return;
+		}
+
+		// Check if this is a flashcard
+		if (!this.deckService.isFlashcard(file)) {
+			return;
+		}
+
+		// Get current frontmatter fields
+		const cache = this.app.metadataCache.getFileCache(file);
+		const fm = cache?.frontmatter as
+			| import("./types").FlashcardFrontmatter
+			| undefined;
+
+		if (!fm?.fields) {
+			return;
+		}
+
+		// Create a hash of the fields to detect changes
+		const fieldsHash = JSON.stringify(fm.fields);
+		const cachedHash = this.frontmatterCache.get(file.path);
+
+		// Skip if fields haven't changed
+		if (fieldsHash === cachedHash) {
+			return;
+		}
+
+		// Update cache
+		this.frontmatterCache.set(file.path, fieldsHash);
+
+		// Clear existing timer for this file
+		const existingTimer = this.autoRegenerateTimers.get(file.path);
+		if (existingTimer) {
+			clearTimeout(existingTimer);
+		}
+
+		// Update status bar
+		if (this.statusBarItem) {
+			this.statusBarItem.setText("Flashcards: update pending...");
+		}
+
+		// Set up debounced regeneration
+		const timer = setTimeout(() => {
+			this.autoRegenerateTimers.delete(file.path);
+
+			if (this.statusBarItem) {
+				this.statusBarItem.setText("Flashcards: regenerating...");
+			}
+
+			void (async () => {
+				try {
+					await this.cardService.regenerateCard(file);
+				} catch (error) {
+					console.error("Auto-regeneration failed:", error);
+				} finally {
+					if (
+						this.statusBarItem &&
+						this.autoRegenerateTimers.size === 0
+					) {
+						this.statusBarItem.setText("");
+					}
+				}
+			})();
+		}, this.settings.autoRegenerateDebounce * 1000);
+
+		this.autoRegenerateTimers.set(file.path, timer);
 	}
 
 	/**

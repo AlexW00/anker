@@ -5,14 +5,13 @@ import {
 	setIcon,
 	Notice,
 	debounce,
-	TFile,
-	stringifyYaml,
 } from "obsidian";
 import type FlashcardsPlugin from "../main";
 import type { Deck } from "../types";
 import { DeckSelectorModal } from "./DeckSelectorModal";
 import { TemplateSelectorModal } from "./TemplateSelectorModal";
 import { CardCreationModal } from "./CardCreationModal";
+import { DeckBaseViewService } from "./DeckBaseViewService";
 
 export const DASHBOARD_VIEW_TYPE = "flashcards-dashboard";
 
@@ -22,12 +21,16 @@ export const DASHBOARD_VIEW_TYPE = "flashcards-dashboard";
 export class DashboardView extends ItemView {
 	plugin: FlashcardsPlugin;
 	private debouncedRender: () => void;
+	private deckBaseViewService: DeckBaseViewService;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
 		super(leaf);
 		this.plugin = plugin;
-		// Debounce render to avoid excessive updates during batch operations
 		this.debouncedRender = debounce(() => void this.render(), 300, true);
+		this.deckBaseViewService = new DeckBaseViewService(
+			this.app,
+			this.plugin.settings,
+		);
 	}
 
 	getViewType(): string {
@@ -145,16 +148,20 @@ export class DashboardView extends ItemView {
 			nameEl.setAttr("aria-label", "View cards in deck");
 			nameEl.addEventListener("click", (event) => {
 				event.stopPropagation();
-				void this.openDeckBaseView(deck.path, deck.name);
+				void this.deckBaseViewService.openDeckBaseView(
+					deck.path,
+					deck.name,
+				);
 			});
 			nameEl.addEventListener("keydown", (event) => {
 				if (event.key === "Enter" || event.key === " ") {
 					event.preventDefault();
-					void this.openDeckBaseView(deck.path, deck.name);
+					void this.deckBaseViewService.openDeckBaseView(
+						deck.path,
+						deck.name,
+					);
 				}
 			});
-
-			// Stats badges
 			const statsEl = infoEl.createDiv({ cls: "flashcard-deck-stats" });
 
 			if (deck.stats.new > 0) {
@@ -204,74 +211,6 @@ export class DashboardView extends ItemView {
 		for (const deck of rootDecks) {
 			renderDeck(deck);
 		}
-	}
-
-	/**
-	 * Opens a Base view for the deck showing all flashcards.
-	 * Creates the .base file in the deck folder if it doesn't exist.
-	 */
-	private async openDeckBaseView(deckPath: string, deckName: string) {
-		const baseFilePath = `${deckPath}/${deckName}.base`;
-
-		// Recreate the base file each time to ensure the config is up to date
-		const baseFile = this.app.vault.getAbstractFileByPath(baseFilePath);
-		if (baseFile instanceof TFile) {
-			try {
-				await this.app.vault.delete(baseFile);
-			} catch (error) {
-				new Notice(`Failed to refresh deck view: ${(error as Error).message}`);
-				return;
-			}
-		}
-
-		// Create the base file with appropriate filters
-		// Note: Bases doesn't support nested properties directly in order,
-		// so we use formulas to extract them
-		const baseConfig = {
-			filters: {
-				and: [
-					`file.inFolder("${deckPath}")`,
-					'type == "flashcard"',
-				],
-			},
-			formulas: {
-				// Extract nested review properties via formulas
-				state: 'if(review.state == 0, "New", if(review.state == 1, "Learning", if(review.state == 2, "Review", "Relearning")))',
-				due: "review.due",
-			},
-			properties: {
-				"formula.state": {
-					displayName: "State",
-				},
-				"formula.due": {
-					displayName: "Due",
-				},
-			},
-			views: [
-				{
-					type: "table",
-					name: "All Cards",
-					order: [
-						"file.name",
-						"formula.state",
-						"formula.due",
-					],
-				},
-			],
-		};
-
-		try {
-			await this.app.vault.create(
-				baseFilePath,
-				stringifyYaml(baseConfig),
-			);
-		} catch (error) {
-			new Notice(`Failed to create deck view: ${(error as Error).message}`);
-			return;
-		}
-
-		// Open the base file
-		await this.app.workspace.openLinkText(baseFilePath, "", false);
 	}
 
 	private startCardCreation() {
