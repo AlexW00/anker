@@ -372,6 +372,64 @@
 	width: 100%;
 }
 
+/* Field wrapper for toolbar + textarea layout */
+.flashcard-field-wrapper {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: var(--size-4-3);
+}
+
+.flashcard-field-label {
+	font-weight: var(--font-medium);
+	margin-bottom: var(--size-2-2);
+	color: var(--text-normal);
+}
+
+/* Media toolbar above textarea */
+.flashcard-field-toolbar {
+	display: flex;
+	gap: var(--size-2-1);
+	padding: var(--size-2-2);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s) var(--radius-s) 0 0;
+	border: 1px solid var(--background-modifier-border);
+	border-bottom: none;
+}
+
+.flashcard-field-wrapper .flashcard-textarea-full-width {
+	border-radius: 0 0 var(--radius-s) var(--radius-s);
+}
+
+/* Textarea Suggest Popover */
+.flashcard-suggest-container {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.flashcard-suggest-container .suggestion-item {
+	padding: var(--size-4-2) var(--size-4-3);
+	cursor: pointer;
+}
+
+.flashcard-suggest-container .suggestion-item:hover,
+.flashcard-suggest-container .suggestion-item.is-selected {
+	background: var(--background-modifier-hover);
+}
+
+.flashcard-suggest-container .suggestion-title {
+	font-weight: var(--font-medium);
+	color: var(--text-normal);
+}
+
+.flashcard-suggest-container .suggestion-note {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
 /* Settings */
 .flashcard-settings-template-textarea {
 	width: 100%;

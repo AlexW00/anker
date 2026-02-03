@@ -171,6 +171,8 @@ export interface FlashcardsPluginSettings {
 	deckViewColumns: DeckViewColumn[];
 	/** If true, open the created card in edit view after creation (unless 'Create & add another' is used) */
 	openCardAfterCreation: boolean;
+	/** Folder path for storing pasted/uploaded media attachments. Relative to vault root. */
+	attachmentFolder: string;
 }
 
 /** Default basic template content */
@@ -236,6 +238,7 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 		"lapses",
 	],
 	openCardAfterCreation: true,
+	attachmentFolder: "Attachments",
 };
 
 /**

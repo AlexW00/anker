@@ -66,6 +66,21 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Attachment folder")
+			.setDesc(
+				"Folder for storing pasted or uploaded media files (images, audio, video). Relative to vault root.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("Attachments")
+					.setValue(this.plugin.settings.attachmentFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.attachmentFolder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Default template content")
 			.setDesc(
 				"Content used when creating new templates. Use {{ variable }} for fields. Content in HTML comments (<!-- -->) is ignored when parsing variables.",
