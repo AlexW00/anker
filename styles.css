@@ -1,8 +1,328 @@
 /*
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Flashcards Plugin Styles */
 
-If your plugin does not need CSS, delete this file.
+/* Dashboard */
+.flashcard-dashboard {
+	padding: var(--size-4-4);
+	max-width: 800px;
+	margin: 0 auto;
+}
 
-*/
+.flashcard-dashboard-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--size-4-4);
+	padding-bottom: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.flashcard-dashboard-toolbar {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+/* Deck List */
+.flashcard-deck-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+}
+
+.flashcard-deck-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--size-4-2) var(--size-4-3);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	transition: background 0.1s ease;
+}
+
+.flashcard-deck-item:hover {
+	background: var(--background-secondary-alt);
+}
+
+.flashcard-deck-info {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+	flex: 1;
+}
+
+.flashcard-deck-name {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	font-weight: var(--font-medium);
+}
+
+.flashcard-deck-stats {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+.flashcard-stat {
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium);
+}
+
+.flashcard-stat-new {
+	background: var(--color-blue);
+	color: var(--text-on-accent);
+}
+
+.flashcard-stat-learning {
+	background: var(--color-orange);
+	color: var(--text-on-accent);
+}
+
+.flashcard-stat-due {
+	background: var(--color-green);
+	color: var(--text-on-accent);
+}
+
+.flashcard-deck-actions {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+/* Empty State */
+.flashcard-empty-state {
+	text-align: center;
+	padding: var(--size-4-8);
+	color: var(--text-muted);
+}
+
+.flashcard-empty-state p {
+	margin-bottom: var(--size-4-2);
+}
+
+/* Buttons */
+.flashcard-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-3);
+	border-radius: var(--radius-s);
+	background: var(--interactive-normal);
+	color: var(--text-normal);
+	cursor: pointer;
+	border: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+	transition: background 0.1s ease;
+}
+
+.flashcard-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.flashcard-btn-small {
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+}
+
+/* Review View */
+.flashcard-review {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: var(--size-4-4);
+	max-width: 700px;
+	margin: 0 auto;
+}
+
+.flashcard-review-progress {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-4-4);
+}
+
+.flashcard-progress-bar {
+	flex: 1;
+	height: 6px;
+	background: var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	overflow: hidden;
+}
+
+.flashcard-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	transition: width 0.3s ease;
+}
+
+.flashcard-progress-text {
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+
+/* Card */
+.flashcard-card-container {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	overflow-y: auto;
+	margin-bottom: var(--size-4-4);
+}
+
+.flashcard-card {
+	width: 100%;
+	background: var(--background-secondary);
+	border-radius: var(--radius-m);
+	padding: var(--size-4-6);
+	box-shadow: var(--shadow-s);
+}
+
+.flashcard-card-content {
+	font-size: var(--font-text-size);
+	line-height: var(--line-height-normal);
+}
+
+.flashcard-card-content p:first-child {
+	margin-top: 0;
+}
+
+.flashcard-card-content p:last-child {
+	margin-bottom: 0;
+}
+
+/* Controls */
+.flashcard-controls {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.flashcard-btn-reveal {
+	padding: var(--size-4-3) var(--size-4-6);
+	font-size: var(--font-ui-medium);
+}
+
+.flashcard-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+/* Rating Buttons */
+.flashcard-rating-buttons {
+	display: flex;
+	gap: var(--size-4-2);
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.flashcard-rating-buttons .flashcard-btn {
+	flex-direction: column;
+	padding: var(--size-4-2) var(--size-4-4);
+	min-width: 70px;
+}
+
+.flashcard-interval {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-top: var(--size-2-1);
+}
+
+.flashcard-btn-again {
+	border-color: var(--color-red);
+}
+
+.flashcard-btn-again:hover {
+	background: hsla(var(--color-red-hsl), 0.2);
+}
+
+.flashcard-btn-hard {
+	border-color: var(--color-orange);
+}
+
+.flashcard-btn-hard:hover {
+	background: hsla(var(--color-orange-hsl), 0.2);
+}
+
+.flashcard-btn-good {
+	border-color: var(--color-green);
+}
+
+.flashcard-btn-good:hover {
+	background: hsla(var(--color-green-hsl), 0.2);
+}
+
+.flashcard-btn-easy {
+	border-color: var(--color-blue);
+}
+
+.flashcard-btn-easy:hover {
+	background: hsla(var(--color-blue-hsl), 0.2);
+}
+
+.flashcard-rating-hints {
+	display: flex;
+	gap: var(--size-4-4);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+/* Edit button */
+.flashcard-btn-edit {
+	position: absolute;
+	top: var(--size-4-4);
+	right: var(--size-4-4);
+	background: transparent;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: var(--size-4-1);
+}
+
+.flashcard-btn-edit:hover {
+	color: var(--text-normal);
+}
+
+/* Complete State */
+.flashcard-complete-state {
+	text-align: center;
+	padding: var(--size-4-8);
+}
+
+.flashcard-complete-icon {
+	font-size: 48px;
+	color: var(--color-green);
+	margin-bottom: var(--size-4-4);
+}
+
+.flashcard-complete-icon svg {
+	width: 48px;
+	height: 48px;
+}
+
+/* Card Creation Modal */
+.flashcard-creation-modal {
+	min-width: 400px;
+}
+
+.flashcard-modal-subtitle {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-bottom: var(--size-4-4);
+}
+
+.flashcard-modal-buttons {
+	display: flex;
+	gap: var(--size-4-2);
+	justify-content: flex-end;
+	margin-top: var(--size-4-4);
+	padding-top: var(--size-4-4);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.flashcard-textarea-full-width {
+	width: 100%;
+}
+

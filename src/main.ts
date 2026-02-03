@@ -1,99 +1,237 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { Notice, Plugin, TFile } from 'obsidian';
+import { DEFAULT_SETTINGS, FlashcardsPluginSettings, FlashcardsSettingTab } from './settings';
+import { TemplateService } from './flashcards/TemplateService';
+import { CardService } from './flashcards/CardService';
+import { DeckService } from './flashcards/DeckService';
+import { Scheduler } from './srs/Scheduler';
+import { DashboardView, DASHBOARD_VIEW_TYPE } from './ui/DashboardView';
+import { ReviewView, REVIEW_VIEW_TYPE } from './ui/ReviewView';
+import { DeckSelectorModal } from './ui/DeckSelectorModal';
+import { TemplateSelectorModal } from './ui/TemplateSelectorModal';
+import { CardCreationModal } from './ui/CardCreationModal';
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class FlashcardsPlugin extends Plugin {
+	settings: FlashcardsPluginSettings;
+	templateService: TemplateService;
+	cardService: CardService;
+	deckService: DeckService;
+	scheduler: Scheduler;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		// Initialize services
+		this.templateService = new TemplateService(this.app);
+		this.cardService = new CardService(this.app, this.templateService);
+		this.deckService = new DeckService(this.app);
+		this.scheduler = new Scheduler();
+
+		// Register views
+		this.registerView(
+			DASHBOARD_VIEW_TYPE,
+			(leaf) => new DashboardView(leaf, this)
+		);
+		this.registerView(
+			REVIEW_VIEW_TYPE,
+			(leaf) => new ReviewView(leaf, this)
+		);
+
+		// Add ribbon icon
+		this.addRibbonIcon('layers', 'Flashcards', () => {
+			void this.openDashboard();
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		// Register commands
+		this.addCommand({
+			id: 'open-dashboard',
+			name: 'Open dashboard',
+			callback: () => this.openDashboard(),
+		});
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
+			id: 'create-card',
+			name: 'Create new card',
+			callback: () => this.createCard(),
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
+
 		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
+			id: 'start-review',
+			name: 'Start review',
+			callback: () => this.selectDeckForReview(),
 		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
+
 		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
+			id: 'regenerate-card',
+			name: 'Regenerate current card',
 			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
+				const file = this.app.workspace.getActiveFile();
+				if (file && this.isFlashcard(file)) {
 					if (!checking) {
-						new SampleModal(this.app).open();
+						void this.regenerateCard(file);
 					}
-
-					// This command will only show up in Command Palette when the check function returns true
 					return true;
 				}
 				return false;
-			}
+			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
+		// Add settings tab
+		this.addSettingTab(new FlashcardsSettingTab(this.app, this));
 	}
 
 	onunload() {
+		// Views are automatically cleaned up
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<FlashcardsPluginSettings> | null);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+	/**
+	 * Open the flashcards dashboard view.
+	 */
+	async openDashboard() {
+		const existing = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+		const existingLeaf = existing[0];
+		
+		if (existingLeaf) {
+			void this.app.workspace.revealLeaf(existingLeaf);
+		} else {
+			const leaf = this.app.workspace.getLeaf('tab');
+			await leaf.setViewState({
+				type: DASHBOARD_VIEW_TYPE,
+				active: true,
+			});
+		}
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+	/**
+	 * Start a review session for a deck.
+	 */
+	async startReview(deckPath: string) {
+		let leaf = this.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0];
+		
+		if (!leaf) {
+			leaf = this.app.workspace.getLeaf('tab');
+			await leaf.setViewState({
+				type: REVIEW_VIEW_TYPE,
+				active: true,
+			});
+		}
+
+		void this.app.workspace.revealLeaf(leaf);
+		
+		const view = leaf.view as ReviewView;
+		await view.startSession(deckPath);
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	/**
+	 * Show deck selector and start review.
+	 */
+	private selectDeckForReview() {
+		const decks = this.deckService.discoverDecks();
+		
+		if (decks.length === 0) {
+			new Notice('No flashcard decks found. Create some cards first!');
+			return;
+		}
+
+		new DeckSelectorModal(
+			this.app,
+			this.deckService,
+			(result) => {
+				void this.startReview(result.path);
+			}
+		).open();
+	}
+
+	/**
+	 * Start the card creation flow.
+	 */
+	private createCard() {
+		new DeckSelectorModal(
+			this.app,
+			this.deckService,
+			(deckResult) => {
+				const deckPath = deckResult.path;
+
+				void this.templateService.getTemplates(
+					this.settings.templateFolder
+				).then((templates) => {
+					if (templates.length === 0) {
+						new Notice(`No templates found in "${this.settings.templateFolder}". Please create a template first.`);
+						return;
+					}
+
+					if (templates.length === 1) {
+						const template = templates[0];
+						if (template) {
+							this.showCardCreationModal(template, deckPath);
+						}
+					} else {
+						new TemplateSelectorModal(
+							this.app,
+							templates,
+							(template) => {
+								this.showCardCreationModal(template, deckPath);
+							}
+						).open();
+					}
+				});
+			}
+		).open();
+	}
+
+	private showCardCreationModal(
+		template: import('./types').FlashcardTemplate,
+		deckPath: string
+	) {
+		new CardCreationModal(
+			this.app,
+			template,
+			deckPath,
+			(fields, createAnother) => {
+				void this.cardService.createCard(
+					deckPath,
+					template.path,
+					fields,
+					this.settings.noteNameTemplate
+				).then(() => {
+					new Notice('Card created!');
+					
+					this.settings.lastUsedDeck = deckPath;
+					void this.saveSettings();
+
+					if (createAnother) {
+						this.showCardCreationModal(template, deckPath);
+					}
+				}).catch((error: Error) => {
+					new Notice(`Failed to create card: ${error.message}`);
+				});
+			}
+		).open();
+	}
+
+	/**
+	 * Check if a file is a flashcard.
+	 */
+	private isFlashcard(file: TFile): boolean {
+		return this.deckService.isFlashcard(file);
+	}
+
+	/**
+	 * Regenerate a flashcard from its template.
+	 */
+	private async regenerateCard(file: TFile) {
+		try {
+			await this.cardService.regenerateCard(file);
+			new Notice('Card regenerated!');
+		} catch (error) {
+			new Notice(`Failed to regenerate: ${(error as Error).message}`);
+		}
 	}
 }
