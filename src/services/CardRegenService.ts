@@ -1,8 +1,5 @@
 import { App, ButtonComponent, Notice, TFile } from "obsidian";
-import type {
-	FlashcardsPluginSettings,
-	FlashcardFrontmatter,
-} from "../types";
+import type { FlashcardsPluginSettings, FlashcardFrontmatter } from "../types";
 import { debugLog, PROTECTION_COMMENT } from "../types";
 import type { CardService } from "../flashcards/CardService";
 import type { DeckService } from "../flashcards/DeckService";
@@ -491,8 +488,7 @@ export class CardRegenService {
 		this.isRegeneratingAll = true;
 
 		// Get template name for display
-		const template =
-			await this.templateService.loadTemplate(templatePath);
+		const template = await this.templateService.loadTemplate(templatePath);
 		const templateName = template?.name ?? templatePath;
 
 		let successCount = 0;

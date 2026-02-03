@@ -39,7 +39,7 @@ Templates define the structure of your flashcards. By default, templates are sto
 ```markdown
 # {{ word }}
 
-*{{ part_of_speech }}*
+_{{ part_of_speech }}_
 
 ---
 
@@ -61,34 +61,34 @@ Templates define the structure of your flashcards. By default, templates are sto
 1. Open the **Flashcards dashboard** from the ribbon icon or command palette
 2. Click **Study** on any deck with due cards
 3. Use keyboard shortcuts to review:
-   - **Space** — Reveal next side / Rate as Good
-   - **1** — Again (forgot)
-   - **2** — Hard
-   - **3** — Good
-   - **4** — Easy
-   - **E** — Edit current card
+    - **Space** — Reveal next side / Rate as Good
+    - **1** — Again (forgot)
+    - **2** — Hard
+    - **3** — Good
+    - **4** — Easy
+    - **E** — Edit current card
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| **Open dashboard** | Show the main flashcards dashboard |
-| **Create new card** | Start the card creation flow |
-| **Start review** | Select a deck and begin studying |
-| **Regenerate current card** | Re-render the current card from its template |
-| **Create new template** | Create a new flashcard template |
-| **Regenerate all cards from template** | Batch regenerate all cards using a template |
+| Command                                | Description                                  |
+| -------------------------------------- | -------------------------------------------- |
+| **Open dashboard**                     | Show the main flashcards dashboard           |
+| **Create new card**                    | Start the card creation flow                 |
+| **Start review**                       | Select a deck and begin studying             |
+| **Regenerate current card**            | Re-render the current card from its template |
+| **Create new template**                | Create a new flashcard template              |
+| **Regenerate all cards from template** | Batch regenerate all cards using a template  |
 
 ## Settings
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| **Template folder** | Folder containing template files | `Templates/Flashcards` |
-| **Note name template** | Filename pattern for new cards (`{{date}}`, `{{time}}`, `{{timestamp}}`) | `{{timestamp}}` |
-| **Auto-regenerate debounce** | Seconds to wait before auto-regenerating after edits | `1` |
-| **Show only current side** | Show only the current card side during review (vs. cumulative) | `false` |
-| **Open card after creation** | Open new cards in edit view after creation | `true` |
-| **Deck view columns** | Columns displayed in deck base views | Various |
+| Setting                      | Description                                                              | Default                |
+| ---------------------------- | ------------------------------------------------------------------------ | ---------------------- |
+| **Template folder**          | Folder containing template files                                         | `Templates/Flashcards` |
+| **Note name template**       | Filename pattern for new cards (`{{date}}`, `{{time}}`, `{{timestamp}}`) | `{{timestamp}}`        |
+| **Auto-regenerate debounce** | Seconds to wait before auto-regenerating after edits                     | `1`                    |
+| **Show only current side**   | Show only the current card side during review (vs. cumulative)           | `false`                |
+| **Open card after creation** | Open new cards in edit view after creation                               | `true`                 |
+| **Deck view columns**        | Columns displayed in deck base views                                     | Various                |
 
 ## Card Structure
 
@@ -99,23 +99,22 @@ Cards are Markdown files with YAML frontmatter:
 type: flashcard
 template: "[[Templates/Flashcards/Basic]]"
 fields:
-  front: "What is the capital of France?"
-  back: "Paris"
+    front: "What is the capital of France?"
+    back: "Paris"
 review:
-  due: "2024-01-15T10:00:00.000Z"
-  state: 0
-  stability: 4.93
-  difficulty: 5.0
-  reps: 0
-  lapses: 0
+    due: "2024-01-15T10:00:00.000Z"
+    state: 0
+    stability: 4.93
+    difficulty: 5.0
+    reps: 0
+    lapses: 0
 ---
-
 <!-- flashcard-content: DO NOT EDIT BELOW - Edit the frontmatter above instead! -->
+
 
 # What is the capital of France?
 
 ---
-
 Paris
 ```
 
@@ -131,6 +130,7 @@ Templates use [Nunjucks](https://mozilla.github.io/nunjucks/) syntax:
 ### Example Templates
 
 **Basic (Front/Back):**
+
 ```markdown
 # {{ front }}
 
@@ -140,6 +140,7 @@ Templates use [Nunjucks](https://mozilla.github.io/nunjucks/) syntax:
 ```
 
 **Cloze-style:**
+
 ```markdown
 {{ context_before }} [...] {{ context_after }}
 
@@ -149,10 +150,11 @@ Templates use [Nunjucks](https://mozilla.github.io/nunjucks/) syntax:
 ```
 
 **Vocabulary:**
+
 ```markdown
 # {{ word }}
 
-*{{ pronunciation }}*
+_{{ pronunciation }}_
 
 ---
 

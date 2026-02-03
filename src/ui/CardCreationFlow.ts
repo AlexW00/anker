@@ -24,48 +24,43 @@ export function showCardCreationModal(
 	deckPath: string,
 	callbacks?: CardCreationCallbacks,
 ): void {
-	new CardCreationModal(
-		app,
-		template,
-		deckPath,
-		(fields, createAnother) => {
-			void cardService
-				.createCard(
-					deckPath,
-					template.path,
-					fields,
-					settings.noteNameTemplate,
-				)
-				.then(async (file) => {
-					new Notice("Card created!");
+	new CardCreationModal(app, template, deckPath, (fields, createAnother) => {
+		void cardService
+			.createCard(
+				deckPath,
+				template.path,
+				fields,
+				settings.noteNameTemplate,
+			)
+			.then(async (file) => {
+				new Notice("Card created!");
 
-					// Update last used deck
-					settings.lastUsedDeck = deckPath;
-					await saveSettings();
+				// Update last used deck
+				settings.lastUsedDeck = deckPath;
+				await saveSettings();
 
-					// Refresh dashboard if callback provided
-					if (callbacks?.onRefresh) {
-						await callbacks.onRefresh();
-					}
+				// Refresh dashboard if callback provided
+				if (callbacks?.onRefresh) {
+					await callbacks.onRefresh();
+				}
 
-					if (createAnother) {
-						// Recursive call for "Create & add another"
-						showCardCreationModal(
-							app,
-							cardService,
-							settings,
-							saveSettings,
-							template,
-							deckPath,
-							callbacks,
-						);
-					} else if (settings.openCardAfterCreation) {
-						await app.workspace.getLeaf().openFile(file);
-					}
-				})
-				.catch((error: Error) => {
-					new Notice(`Failed to create card: ${error.message}`);
-				});
-		},
-	).open();
+				if (createAnother) {
+					// Recursive call for "Create & add another"
+					showCardCreationModal(
+						app,
+						cardService,
+						settings,
+						saveSettings,
+						template,
+						deckPath,
+						callbacks,
+					);
+				} else if (settings.openCardAfterCreation) {
+					await app.workspace.getLeaf().openFile(file);
+				}
+			})
+			.catch((error: Error) => {
+				new Notice(`Failed to create card: ${error.message}`);
+			});
+	}).open();
 }
