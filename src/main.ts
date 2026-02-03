@@ -30,6 +30,13 @@ export default class FlashcardsPlugin extends Plugin {
 		this.deckService = new DeckService(this.app);
 		this.scheduler = new Scheduler();
 
+		// Ensure default template exists once the vault cache is ready
+		this.app.workspace.onLayoutReady(() => {
+			void this.templateService.ensureDefaultTemplate(
+				this.settings.templateFolder,
+			);
+		});
+
 		// Register views
 		this.registerView(
 			DASHBOARD_VIEW_TYPE,

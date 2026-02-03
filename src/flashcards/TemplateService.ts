@@ -143,4 +143,88 @@ export class TemplateService {
 			.replace(/\{\{time\}\}/g, time)
 			.replace(/\{\{timestamp\}\}/g, timestamp);
 	}
+
+	/**
+	 * Ensure the template folder exists and contains at least a Basic template.
+	 * Creates the folder and Basic template if they don't exist.
+	 */
+	async ensureDefaultTemplate(templateFolder: string): Promise<void> {
+		// Check if folder exists
+		let folder = this.app.vault.getAbstractFileByPath(templateFolder);
+
+		// Create folder if it doesn't exist
+		if (!folder) {
+			try {
+				await this.app.vault.createFolder(templateFolder);
+			} catch {
+				// Folder may already exist on disk but not indexed yet
+			}
+			folder = this.app.vault.getAbstractFileByPath(templateFolder);
+		}
+
+		if (!(folder instanceof TFolder)) {
+			return;
+		}
+
+		// Check if folder has any template files
+		const hasTemplates = folder.children.some(
+			(file) => file instanceof TFile && file.extension === "md",
+		);
+
+		if (!hasTemplates) {
+			await this.createBasicTemplate(templateFolder);
+		}
+	}
+
+	/**
+	 * Create the default Basic template with usage tips.
+	 */
+	private async createBasicTemplate(templateFolder: string): Promise<void> {
+		const basicTemplatePath = `${templateFolder}/Basic.md`;
+		const basicTemplateContent = `# {{ front }}
+
+---
+
+{{ back }}
+
+<!--
+## Template Tips
+
+This is a Basic flashcard template using Nunjucks syntax.
+
+### How templates work:
+- Variables are wrapped in {{ double_braces }}
+- When creating a card, you'll be prompted to fill in each variable
+- The content above the --- is shown as the question
+- The content below the --- is revealed as the answer
+
+### Creating your own templates:
+1. Create a new .md file in this folder
+2. Use {{ variable_name }} for any fields you want to fill in
+3. Use --- to separate the front (question) from the back (answer)
+
+### Example: Vocabulary Template
+# {{ word }}
+
+*{{ part_of_speech }}*
+
+---
+
+**Definition:** {{ definition }}
+
+**Example:** {{ example_sentence }}
+
+### Example: Cloze Template
+{{ context_before }} [...] {{ context_after }}
+
+---
+
+{{ context_before }} **{{ answer }}** {{ context_after }}
+
+For more information, see the plugin documentation.
+-->
+`;
+
+		await this.app.vault.create(basicTemplatePath, basicTemplateContent);
+	}
 }
