@@ -66,7 +66,6 @@ export class CardService {
 			fields,
 			review: this.createInitialReviewState(),
 		};
-		frontmatter.dueAt = frontmatter.review.due;
 
 		// Build file content
 		const content = this.buildFileContent(frontmatter, body);
@@ -122,7 +121,6 @@ export class CardService {
 		const updatedFm: FlashcardFrontmatter = {
 			...fm,
 			review: reviewState,
-			dueAt: reviewState.due,
 		};
 
 		// Extract body (everything after frontmatter)

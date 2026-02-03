@@ -25,7 +25,6 @@ export interface FlashcardFrontmatter {
 	template: string; // WikiLink to template file, e.g. "[[Templates/Vocab Card]]"
 	fields: Record<string, string>; // Raw data variables
 	review: ReviewState;
-	dueAt?: string; // Convenience field, mirrors review.due
 }
 
 /**

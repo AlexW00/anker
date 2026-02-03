@@ -321,7 +321,6 @@ export class ReviewView extends ItemView {
 			// Show rating buttons
 			this.renderRatingButtons(actionsContainer, currentCard);
 		}
-
 	}
 
 	private renderRatingButtons(container: HTMLElement, card: Flashcard) {

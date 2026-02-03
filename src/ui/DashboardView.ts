@@ -5,7 +5,8 @@ import {
 	setIcon,
 	Notice,
 	debounce,
-	TFolder,
+	TFile,
+	stringifyYaml,
 } from "obsidian";
 import type FlashcardsPlugin from "../main";
 import type { Deck } from "../types";
@@ -140,16 +141,16 @@ export class DashboardView extends ItemView {
 			nameEl.createSpan({ text: ` ${deck.name}` });
 			nameEl.setAttr("role", "button");
 			nameEl.setAttr("tabindex", "0");
-			nameEl.setAttr("title", "Reveal in file explorer");
-			nameEl.setAttr("aria-label", "Reveal in file explorer");
+			nameEl.setAttr("title", "View cards in deck");
+			nameEl.setAttr("aria-label", "View cards in deck");
 			nameEl.addEventListener("click", (event) => {
 				event.stopPropagation();
-				void this.revealDeckInFileExplorer(deck.path);
+				void this.openDeckBaseView(deck.path, deck.name);
 			});
 			nameEl.addEventListener("keydown", (event) => {
 				if (event.key === "Enter" || event.key === " ") {
 					event.preventDefault();
-					void this.revealDeckInFileExplorer(deck.path);
+					void this.openDeckBaseView(deck.path, deck.name);
 				}
 			});
 
@@ -205,33 +206,72 @@ export class DashboardView extends ItemView {
 		}
 	}
 
-	private async revealDeckInFileExplorer(deckPath: string) {
-		const folder = this.app.vault.getAbstractFileByPath(deckPath);
-		if (!(folder instanceof TFolder)) {
-			new Notice(`Folder not found: ${deckPath}`);
-			return;
-		}
+	/**
+	 * Opens a Base view for the deck showing all flashcards.
+	 * Creates the .base file in the deck folder if it doesn't exist.
+	 */
+	private async openDeckBaseView(deckPath: string, deckName: string) {
+		const baseFilePath = `${deckPath}/${deckName}.base`;
 
-		let leaf: WorkspaceLeaf | null =
-			this.app.workspace.getLeavesOfType("file-explorer")[0] ?? null;
-		if (!leaf) {
-			leaf = this.app.workspace.getLeftLeaf(false);
-			if (leaf) {
-				await leaf.setViewState({
-					type: "file-explorer",
-					active: true,
-				});
+		// Recreate the base file each time to ensure the config is up to date
+		const baseFile = this.app.vault.getAbstractFileByPath(baseFilePath);
+		if (baseFile instanceof TFile) {
+			try {
+				await this.app.vault.delete(baseFile);
+			} catch (error) {
+				new Notice(`Failed to refresh deck view: ${(error as Error).message}`);
+				return;
 			}
 		}
 
-		if (!leaf) return;
-		void this.app.workspace.revealLeaf(leaf);
-
-		const view = leaf.view as unknown as {
-			revealInFolder?: (file: unknown) => void;
+		// Create the base file with appropriate filters
+		// Note: Bases doesn't support nested properties directly in order,
+		// so we use formulas to extract them
+		const baseConfig = {
+			filters: {
+				and: [
+					`file.inFolder("${deckPath}")`,
+					'type == "flashcard"',
+				],
+			},
+			formulas: {
+				// Extract nested review properties via formulas
+				state: 'if(review.state == 0, "New", if(review.state == 1, "Learning", if(review.state == 2, "Review", "Relearning")))',
+				due: "review.due",
+			},
+			properties: {
+				"formula.state": {
+					displayName: "State",
+				},
+				"formula.due": {
+					displayName: "Due",
+				},
+			},
+			views: [
+				{
+					type: "table",
+					name: "All Cards",
+					order: [
+						"file.name",
+						"formula.state",
+						"formula.due",
+					],
+				},
+			],
 		};
 
-		view.revealInFolder?.(folder);
+		try {
+			await this.app.vault.create(
+				baseFilePath,
+				stringifyYaml(baseConfig),
+			);
+		} catch (error) {
+			new Notice(`Failed to create deck view: ${(error as Error).message}`);
+			return;
+		}
+
+		// Open the base file
+		await this.app.workspace.openLinkText(baseFilePath, "", false);
 	}
 
 	private startCardCreation() {

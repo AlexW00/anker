@@ -22,7 +22,6 @@
             - `lapses`: number
             - `state`: `New` | `Learning` | `Review` | `Relearning` (string or numeric enum)
             - `last_review` (optional): ISO timestamp
-    - `dueAt`: ISO timestamp for the next review (optional convenience field; should mirror `review.due`).
     - _Note:_ The body content is considered a "Hydration Artifact"—it can be overwritten by the plugin based on the fields and template.
 
 ## 2. Templating Engine (Nunjucks)
