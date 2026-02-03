@@ -6,7 +6,11 @@ import {
 	Notice,
 	setIcon,
 } from "obsidian";
-import type { Deck, FlashcardTemplate, FlashcardsPluginSettings } from "../types";
+import type {
+	Deck,
+	FlashcardTemplate,
+	FlashcardsPluginSettings,
+} from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
@@ -74,7 +78,8 @@ export class CardCreationModal extends Modal {
 
 		// Will be set in onOpen after loading available options
 		this.currentDeckPath = options.initialDeckPath ?? "";
-		this.currentTemplate = options.initialTemplate ?? ({} as FlashcardTemplate);
+		this.currentTemplate =
+			options.initialTemplate ?? ({} as FlashcardTemplate);
 	}
 
 	async onOpen() {
@@ -104,7 +109,12 @@ export class CardCreationModal extends Modal {
 		// Determine initial deck path
 		if (!this.currentDeckPath) {
 			// Priority: lastUsedDeck -> first available deck -> vault root
-			if (this.settings.lastUsedDeck && this.availableDecks.some(d => d.path === this.settings.lastUsedDeck)) {
+			if (
+				this.settings.lastUsedDeck &&
+				this.availableDecks.some(
+					(d) => d.path === this.settings.lastUsedDeck,
+				)
+			) {
 				this.currentDeckPath = this.settings.lastUsedDeck;
 			} else if (this.availableDecks.length > 0) {
 				this.currentDeckPath = this.availableDecks[0]?.path ?? "/";
@@ -119,7 +129,10 @@ export class CardCreationModal extends Modal {
 			const lastTemplate = this.availableTemplates.find(
 				(t) => t.path === this.settings.lastUsedTemplate,
 			);
-			this.currentTemplate = lastTemplate ?? this.availableTemplates[0] ?? ({} as FlashcardTemplate);
+			this.currentTemplate =
+				lastTemplate ??
+				this.availableTemplates[0] ??
+				({} as FlashcardTemplate);
 		}
 
 		// Initialize fields for current template
@@ -145,18 +158,31 @@ export class CardCreationModal extends Modal {
 		contentEl.empty();
 
 		// Header row: "New [Template] Card in Deck [Deck]"
-		const headerRow = contentEl.createDiv({ cls: "flashcard-modal-header-row" });
+		const headerRow = contentEl.createDiv({
+			cls: "flashcard-modal-header-row",
+		});
 
-		headerRow.createSpan({ text: "New ", cls: "flashcard-modal-header-text" });
+		headerRow.createSpan({
+			text: "New ",
+			cls: "flashcard-modal-header-text",
+		});
 
 		// Template selector
 		this.createInlineDropdown(
 			headerRow,
-			this.availableTemplates.map((t) => ({ label: t.name, value: t.path })),
+			this.availableTemplates.map((t) => ({
+				label: t.name,
+				value: t.path,
+			})),
 			this.currentTemplate.path,
 			(selectedPath) => {
-				const newTemplate = this.availableTemplates.find((t) => t.path === selectedPath);
-				if (newTemplate && newTemplate.path !== this.currentTemplate.path) {
+				const newTemplate = this.availableTemplates.find(
+					(t) => t.path === selectedPath,
+				);
+				if (
+					newTemplate &&
+					newTemplate.path !== this.currentTemplate.path
+				) {
 					this.currentTemplate = newTemplate;
 					this.initializeFields();
 					this.renderContent();
@@ -164,7 +190,10 @@ export class CardCreationModal extends Modal {
 			},
 		);
 
-		headerRow.createSpan({ text: " Card in Deck ", cls: "flashcard-modal-header-text" });
+		headerRow.createSpan({
+			text: " Card in Deck ",
+			cls: "flashcard-modal-header-text",
+		});
 
 		// Deck selector
 		const deckOptions = this.availableDecks.map((d) => ({
@@ -190,7 +219,9 @@ export class CardCreationModal extends Modal {
 
 		// Dynamic form fields
 		for (const variable of this.currentTemplate.variables) {
-			const fieldRow = contentEl.createDiv({ cls: "flashcard-field-row" });
+			const fieldRow = contentEl.createDiv({
+				cls: "flashcard-field-row",
+			});
 
 			// Field label (left side)
 			fieldRow.createEl("label", {
@@ -235,7 +266,10 @@ export class CardCreationModal extends Modal {
 				cls: "flashcard-attach-btn",
 			});
 			setIcon(attachBtn, "paperclip");
-			attachBtn.setAttribute("aria-label", "Attach media (image, video, audio)");
+			attachBtn.setAttribute(
+				"aria-label",
+				"Attach media (image, video, audio)",
+			);
 			attachBtn.addEventListener("click", () => {
 				this.openFilePicker(variable.name);
 			});
@@ -247,13 +281,17 @@ export class CardCreationModal extends Modal {
 		});
 
 		// Cancel button (left side)
-		const leftButtons = buttonContainer.createDiv({ cls: "flashcard-buttons-left" });
+		const leftButtons = buttonContainer.createDiv({
+			cls: "flashcard-buttons-left",
+		});
 		new ButtonComponent(leftButtons)
 			.setButtonText("Cancel")
 			.onClick(() => this.close());
 
 		// Create buttons (right side)
-		const rightButtons = buttonContainer.createDiv({ cls: "flashcard-buttons-right" });
+		const rightButtons = buttonContainer.createDiv({
+			cls: "flashcard-buttons-right",
+		});
 
 		new ButtonComponent(rightButtons)
 			.setButtonText("Create & add another")
@@ -427,21 +465,21 @@ export class CardCreationModal extends Modal {
 		if (!items) return;
 
 		for (const item of Array.from(items)) {
+			const blob = item.getAsFile();
+			const mimeType = item.type || blob?.type || "";
+
 			// Handle images, videos, and audio
 			if (
-				item.type.startsWith("image/") ||
-				item.type.startsWith("video/") ||
-				item.type.startsWith("audio/")
+				mimeType.startsWith("image/") ||
+				mimeType.startsWith("video/") ||
+				mimeType.startsWith("audio/")
 			) {
 				event.preventDefault();
-
-				const blob = item.getAsFile();
 				if (!blob) continue;
 
 				try {
 					const buffer = await blob.arrayBuffer();
-					const mimeType = item.type;
-					const extension = this.getExtensionFromMime(mimeType);
+					const extension = this.getExtensionForPaste(blob, mimeType);
 					const filename = `${generateUUID()}.${extension}`;
 					const attachmentFolder = this.settings.attachmentFolder;
 					const path = `${attachmentFolder}/${filename}`;
@@ -493,6 +531,23 @@ export class CardCreationModal extends Modal {
 			"audio/flac": "flac",
 		};
 		return mimeToExt[mimeType] || mimeType.split("/")[1] || "bin";
+	}
+
+	/**
+	 * Resolve a safe file extension for pasted media.
+	 */
+	private getExtensionForPaste(blob: File, mimeType: string): string {
+		if (mimeType) {
+			const extFromMime = this.getExtensionFromMime(mimeType);
+			if (extFromMime && extFromMime !== "bin") return extFromMime;
+		}
+
+		const nameParts = blob.name?.split(".") ?? [];
+		const extFromName = nameParts.length > 1 ? nameParts.pop() : "";
+		if (extFromName) return extFromName.toLowerCase();
+
+		// Fallbacks for common paste types when MIME is missing
+		return "png";
 	}
 
 	/**

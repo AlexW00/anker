@@ -180,7 +180,10 @@ export class TextareaSuggest {
 		const beforeCursor = value.substring(0, cursorPos);
 
 		// Replace [[ + query with [[filename]]
-		const newBefore = beforeCursor.replace(/\[\[[^[]*?$/, `[[${file.basename}]]`);
+		const newBefore = beforeCursor.replace(
+			/\[\[[^[]*?$/,
+			`[[${file.basename}]]`,
+		);
 		this.textarea.value = newBefore + value.substring(cursorPos);
 		this.textarea.selectionStart = this.textarea.selectionEnd =
 			newBefore.length;
