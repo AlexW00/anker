@@ -4,6 +4,8 @@ A spaced repetition flashcards plugin for Obsidian using the FSRS algorithm.
 
 DISCLAIMER: Alpha! Planning to release it as a beta soon tho!
 
+-> [todos](todo.md)
+
 ## Features
 
 - **FSRS Scheduling** — Uses the Free Spaced Repetition Scheduler algorithm via `ts-fsrs` for optimal review timing

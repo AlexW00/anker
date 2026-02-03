@@ -1,4 +1,4 @@
-## 8. Future (Post-MVP)
+## Todos
 
 - **AI-assisted templating (optional):**
     - **Custom Nunjucks Filters:** Implement an async filter `| aiGenerate`.
@@ -9,3 +9,4 @@
     - **API Key:** Secure storage.
     - **Model:** Select model (e.g., GPT-4o, Claude 3.5).
 - Add edit card command (i.e. opens create card modal but with the fields filled out and linked to the card> make the modal generic?!)
+- Anki import?!
