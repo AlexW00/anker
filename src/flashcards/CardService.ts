@@ -50,6 +50,13 @@ export class CardService {
 		if (!template) {
 			throw new Error(`Template not found: ${templatePath}`);
 		}
+		console.debug("[Flashcards] create-card: template loaded", {
+			path: template.path,
+			frontmatterKeys: template.frontmatter
+				? Object.keys(template.frontmatter)
+				: [],
+			bodyLength: template.body.length,
+		});
 
 		// Generate note name
 		const noteName =
@@ -73,6 +80,9 @@ export class CardService {
 			template.frontmatter,
 			systemFrontmatter,
 		);
+		console.debug("[Flashcards] create-card: merged frontmatter keys", {
+			keys: Object.keys(mergedFrontmatter),
+		});
 
 		// Build file content
 		const content = this.buildFileContent(mergedFrontmatter, body);
@@ -89,19 +99,17 @@ export class CardService {
 	private mergeTemplateFrontmatter(
 		templateFrontmatter: Record<string, unknown> | null,
 		systemFrontmatter: FlashcardFrontmatter,
+		existingFrontmatter?: Record<string, unknown>,
 	): Record<string, unknown> {
-		if (!templateFrontmatter) {
-			return { ...systemFrontmatter };
-		}
+		const merged: Record<string, unknown> = {
+			...(existingFrontmatter ?? {}),
+			...(templateFrontmatter ?? {}),
+			...systemFrontmatter,
+		};
 
-		// Start with template frontmatter as base
-		const merged: Record<string, unknown> = { ...templateFrontmatter };
-
-		// System properties always overwrite template properties
-		merged.type = systemFrontmatter.type;
-		merged.template = systemFrontmatter.template;
-		merged.fields = systemFrontmatter.fields;
-		merged.review = systemFrontmatter.review;
+		console.debug("[Flashcards] merge-frontmatter: result keys", {
+			keys: Object.keys(merged),
+		});
 
 		return merged;
 	}
@@ -122,13 +130,37 @@ export class CardService {
 		if (!template) {
 			throw new Error(`Template not found: ${fm.template}`);
 		}
+		console.debug("[Flashcards] regenerate-card: template loaded", {
+			path: template.path,
+			frontmatterKeys: template.frontmatter
+				? Object.keys(template.frontmatter)
+				: [],
+			bodyLength: template.body.length,
+		});
+
+		// Build system frontmatter from current card (always takes precedence)
+		const systemFrontmatter: FlashcardFrontmatter = {
+			type: "flashcard",
+			template: fm.template,
+			fields: fm.fields,
+			review: fm.review,
+		};
 
 		// Render new body (use template.body which excludes template frontmatter)
 		const body = this.templateService.render(template.body, fm.fields);
 
-		// Update file content (preserve frontmatter, replace body)
-		const content = await this.app.vault.read(file);
-		const newContent = this.replaceBody(content, body);
+		// Merge existing frontmatter + template frontmatter + system overrides
+		const mergedFrontmatter = this.mergeTemplateFrontmatter(
+			template.frontmatter,
+			systemFrontmatter,
+			fm as unknown as Record<string, unknown>,
+		);
+		console.debug("[Flashcards] regenerate-card: merged frontmatter keys", {
+			keys: Object.keys(mergedFrontmatter),
+		});
+
+		// Update file content (write merged frontmatter + new body)
+		const newContent = this.buildFileContent(mergedFrontmatter, body);
 
 		await this.app.vault.modify(file, newContent);
 	}

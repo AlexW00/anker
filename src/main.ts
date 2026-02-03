@@ -202,7 +202,7 @@ export default class FlashcardsPlugin extends Plugin {
 
 	/**
 	 * Handle metadata cache changes for auto-regeneration.
-	 * Only triggers regeneration when flashcard fields change.
+	 * Triggers regeneration when flashcard frontmatter changes (excluding review).
 	 */
 	private handleMetadataChange(file: TFile): void {
 		// Skip if auto-regenerate is disabled
@@ -221,21 +221,23 @@ export default class FlashcardsPlugin extends Plugin {
 			| import("./types").FlashcardFrontmatter
 			| undefined;
 
-		if (!fm?.fields) {
+		if (!fm) {
 			return;
 		}
 
-		// Create a hash of the fields to detect changes
-		const fieldsHash = JSON.stringify(fm.fields);
+		// Create a hash of frontmatter (excluding review) to detect changes
+		const { review, ...rest } = fm as unknown as Record<string, unknown>;
+		void review;
+		const frontmatterHash = JSON.stringify(rest);
 		const cachedHash = this.frontmatterCache.get(file.path);
 
-		// Skip if fields haven't changed
-		if (fieldsHash === cachedHash) {
+		// Skip if frontmatter hasn't changed
+		if (frontmatterHash === cachedHash) {
 			return;
 		}
 
 		// Update cache
-		this.frontmatterCache.set(file.path, fieldsHash);
+		this.frontmatterCache.set(file.path, frontmatterHash);
 
 		// Increment version to invalidate any pending regeneration
 		const nextVersion =
@@ -530,10 +532,7 @@ export default class FlashcardsPlugin extends Plugin {
 		// Set up debounced notification - timer starts immediately on modify event
 		this.templateChangeTimer = setTimeout(() => {
 			this.templateChangeTimer = null;
-			console.debug(
-				"[Flashcards] template-change: timer fired",
-				filePath,
-			);
+			console.debug("[Flashcards] template-change: timer fired", filePath);
 
 			// Double-check that regeneration isn't running
 			if (this.isRegeneratingAll) {

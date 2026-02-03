@@ -42,6 +42,7 @@ export class TemplateService {
 			/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$/,
 		);
 		if (!fmMatch) {
+			console.debug("[Flashcards] template-parse: no frontmatter found");
 			// No frontmatter, entire content is the body
 			return { frontmatter: null, body: content };
 		}
@@ -54,8 +55,13 @@ export class TemplateService {
 				string,
 				unknown
 			>;
+			const keys = frontmatter ? Object.keys(frontmatter) : [];
+			console.debug("[Flashcards] template-parse: frontmatter keys", keys);
 			return { frontmatter, body };
 		} catch {
+			console.debug(
+				"[Flashcards] template-parse: invalid YAML frontmatter",
+			);
 			// Invalid YAML, treat as no frontmatter
 			return { frontmatter: null, body: content };
 		}
@@ -147,6 +153,7 @@ export class TemplateService {
 	async loadTemplate(
 		templatePath: string,
 	): Promise<FlashcardTemplate | null> {
+		console.debug("[Flashcards] template-load: start", templatePath);
 		// Handle WikiLink format: [[path]] or [[path|alias]]
 		const cleanPath = this.resolveWikiLink(templatePath);
 
@@ -157,10 +164,19 @@ export class TemplateService {
 				cleanPath + ".md",
 			);
 			if (!(fileWithExt instanceof TFile)) {
+				console.debug(
+					"[Flashcards] template-load: file not found",
+					templatePath,
+				);
 				return null;
 			}
 			const content = await this.app.vault.read(fileWithExt);
 			const { frontmatter, body } = this.parseTemplateContent(content);
+			console.debug("[Flashcards] template-load: parsed", {
+				path: fileWithExt.path,
+				frontmatterKeys: frontmatter ? Object.keys(frontmatter) : [],
+				bodyLength: body.length,
+			});
 			return {
 				path: fileWithExt.path,
 				name: fileWithExt.basename,
@@ -173,6 +189,11 @@ export class TemplateService {
 
 		const content = await this.app.vault.read(file);
 		const { frontmatter, body } = this.parseTemplateContent(content);
+		console.debug("[Flashcards] template-load: parsed", {
+			path: file.path,
+			frontmatterKeys: frontmatter ? Object.keys(frontmatter) : [],
+			bodyLength: body.length,
+		});
 		return {
 			path: file.path,
 			name: file.basename,
