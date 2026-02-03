@@ -2,6 +2,7 @@ import {
 	ButtonComponent,
 	ItemView,
 	MarkdownRenderer,
+	Scope,
 	TFile,
 	WorkspaceLeaf,
 	debounce,
@@ -39,6 +40,10 @@ export class ReviewView extends ItemView {
 			300,
 			true,
 		);
+
+		// Set up keyboard shortcuts for review view
+		this.scope = new Scope(this.app.scope);
+		this.registerHotkeys();
 	}
 
 	getViewType(): string {
@@ -51,6 +56,78 @@ export class ReviewView extends ItemView {
 
 	getIcon(): string {
 		return "brain";
+	}
+
+	/**
+	 * Register keyboard shortcuts for the review view.
+	 * These are scoped to this view and only active when it's focused.
+	 */
+	private registerHotkeys() {
+		const scope = this.scope;
+		if (!scope) return;
+
+		// Space - reveal next side or rate as "Good"
+		scope.register([], " ", () => {
+			if (!this.session) return;
+			const isLastSide =
+				this.session.currentSide >= this.session.totalSides - 1;
+			if (!isLastSide) {
+				this.revealNext();
+			} else {
+				void this.rateCard(Rating.Good);
+			}
+			return false;
+		});
+
+		// E - edit current card
+		scope.register([], "e", () => {
+			void this.editCurrentCard();
+			return false;
+		});
+
+		// 1 - rate as Again
+		scope.register([], "1", () => {
+			if (!this.session) return;
+			const isLastSide =
+				this.session.currentSide >= this.session.totalSides - 1;
+			if (isLastSide) {
+				void this.rateCard(Rating.Again);
+			}
+			return false;
+		});
+
+		// 2 - rate as Hard
+		scope.register([], "2", () => {
+			if (!this.session) return;
+			const isLastSide =
+				this.session.currentSide >= this.session.totalSides - 1;
+			if (isLastSide) {
+				void this.rateCard(Rating.Hard);
+			}
+			return false;
+		});
+
+		// 3 - rate as Good
+		scope.register([], "3", () => {
+			if (!this.session) return;
+			const isLastSide =
+				this.session.currentSide >= this.session.totalSides - 1;
+			if (isLastSide) {
+				void this.rateCard(Rating.Good);
+			}
+			return false;
+		});
+
+		// 4 - rate as Easy
+		scope.register([], "4", () => {
+			if (!this.session) return;
+			const isLastSide =
+				this.session.currentSide >= this.session.totalSides - 1;
+			if (isLastSide) {
+				void this.rateCard(Rating.Easy);
+			}
+			return false;
+		});
 	}
 
 	async onOpen() {
@@ -222,13 +299,6 @@ export class ReviewView extends ItemView {
 			cls: "flashcard-controls",
 		});
 
-		// Edit button (bottom left, always visible)
-		new ButtonComponent(controlsContainer)
-			.setIcon("edit")
-			.setTooltip("Edit card")
-			.setClass("flashcard-btn-edit")
-			.onClick(() => void this.editCurrentCard());
-
 		const actionsContainer = controlsContainer.createDiv({
 			cls: "flashcard-actions",
 		});
@@ -243,10 +313,15 @@ export class ReviewView extends ItemView {
 				.setCta()
 				.setClass("flashcard-btn-reveal")
 				.onClick(() => this.revealNext());
+			actionsContainer.createDiv({
+				cls: "flashcard-hint",
+				text: "Space to show answer • E to edit",
+			});
 		} else {
 			// Show rating buttons
 			this.renderRatingButtons(actionsContainer, currentCard);
 		}
+
 	}
 
 	private renderRatingButtons(container: HTMLElement, card: Flashcard) {
@@ -279,7 +354,7 @@ export class ReviewView extends ItemView {
 
 		// Again button
 		createRatingButton(
-			"Again",
+			"Again (1)",
 			nextStates.again.interval,
 			Rating.Again,
 			"flashcard-btn-again",
@@ -287,7 +362,7 @@ export class ReviewView extends ItemView {
 
 		// Hard button
 		createRatingButton(
-			"Hard",
+			"Hard (2)",
 			nextStates.hard.interval,
 			Rating.Hard,
 			"flashcard-btn-hard",
@@ -295,7 +370,7 @@ export class ReviewView extends ItemView {
 
 		// Good button
 		createRatingButton(
-			"Good",
+			"Good (3)",
 			nextStates.good.interval,
 			Rating.Good,
 			"flashcard-btn-good",
@@ -303,7 +378,7 @@ export class ReviewView extends ItemView {
 
 		// Easy button
 		createRatingButton(
-			"Easy",
+			"Easy (4)",
 			nextStates.easy.interval,
 			Rating.Easy,
 			"flashcard-btn-easy",

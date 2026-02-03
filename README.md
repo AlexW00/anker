@@ -101,3 +101,6 @@
     - **Provider:** (OpenAI, Anthropic, Local, etc.)
     - **API Key:** Secure storage.
     - **Model:** Select model (e.g., GPT-4o, Claude 3.5).
+- Update Dashboard so that:
+    - folders can be collapsed/expanded
+    - gray bg of folder items is gone
