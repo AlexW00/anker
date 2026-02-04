@@ -141,7 +141,7 @@ export class CardRegenService {
 
 		// Update status bar
 		if (this.statusBarItem) {
-			this.statusBarItem.setText("Flashcards: update pending...");
+			this.statusBarItem.setText("Anker: update pending...");
 		}
 
 		// Set up debounced regeneration
@@ -157,7 +157,7 @@ export class CardRegenService {
 			this.autoRegenerateTimers.delete(file.path);
 
 			if (this.statusBarItem) {
-				this.statusBarItem.setText("Flashcards: regenerating...");
+				this.statusBarItem.setText("Anker: regenerating...");
 			}
 
 			void (async () => {
@@ -234,7 +234,7 @@ export class CardRegenService {
 
 			// Update status bar
 			if (this.statusBarItem) {
-				this.statusBarItem.setText("Flashcards: restoring content...");
+				this.statusBarItem.setText("Anker: restoring content...");
 			}
 
 			// Set up debounced regeneration
@@ -252,7 +252,7 @@ export class CardRegenService {
 				this.autoRegenerateTimers.delete(file.path);
 
 				if (this.statusBarItem) {
-					this.statusBarItem.setText("Flashcards: regenerating...");
+					this.statusBarItem.setText("Anker: regenerating...");
 				}
 
 				void (async () => {

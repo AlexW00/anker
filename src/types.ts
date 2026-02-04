@@ -12,7 +12,7 @@ export const DEBUG = false;
  */
 export function debugLog(message: string, ...args: unknown[]): void {
 	if (DEBUG) {
-		console.debug(`[Flashcards] ${message}`, ...args);
+		console.debug(`[Anker] ${message}`, ...args);
 	}
 }
 
@@ -229,7 +229,7 @@ For more information, see the plugin documentation.
 `;
 
 export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
-	templateFolder: "Flashcards/Templates",
+	templateFolder: "Anker/Templates",
 	noteNameTemplate: "{{timestamp}}",
 	defaultTemplateContent: DEFAULT_BASIC_TEMPLATE,
 	autoRegenerateDebounce: 1,
@@ -245,7 +245,7 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 		"lapses",
 	],
 	openCardAfterCreation: true,
-	attachmentFolder: "Flashcards/Attachments",
+	attachmentFolder: "Anker/Attachments",
 };
 
 export const DEFAULT_STATE: FlashcardsPluginState = {

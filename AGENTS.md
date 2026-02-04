@@ -1,4 +1,4 @@
-# Obsidian Flashcards Plugin
+# Anker Plugin
 
 ## Project overview
 

@@ -1,4 +1,4 @@
-# Obsidian Flashcards
+# Anker
 
 An Obsidian **native** flashcards plugin using the FSRS algorithm.
 
@@ -27,7 +27,7 @@ Not available yet!
 ### Manual Installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
-2. Create a folder `<YourVault>/.obsidian/plugins/obsidian-flashcards/`
+2. Create a folder `<YourVault>/.obsidian/plugins/anker/`
 3. Copy the downloaded files into that folder
 4. Restart Obsidian and enable the plugin in **Settings → Community plugins**
 
@@ -35,9 +35,9 @@ Not available yet!
 
 ### 1. Create a Template
 
-Templates define the structure of your flashcards. By default, templates are stored in `Templates/Flashcards/`.
+Templates define the structure of your flashcards. By default, templates are stored in `Anker/Templates/`.
 
-1. Run command **Flashcards: Create new template** (or check the folder for an existing one)
+1. Run command **Anker: Create new template** (or check the folder for an existing one)
 2. Enter a name (e.g., "Vocabulary")
 3. Edit the template using `{{ variable }}` placeholders:
 
@@ -55,7 +55,7 @@ _{{ part_of_speech }}_
 
 ### 2. Create Cards
 
-1. Run command **Flashcards: Create new card** (or click the ribbon icon)
+1. Run command **Anker: Create new card** (or click the ribbon icon)
 2. Select a deck (folder) for the card
 3. Select a template
 4. Fill in the field values
@@ -63,7 +63,7 @@ _{{ part_of_speech }}_
 
 ### 3. Study Cards
 
-1. Open the **Flashcards dashboard** from the ribbon icon or command palette
+1. Open the **Anker dashboard** from the ribbon icon or command palette
 2. Click **Study** on any deck with due cards
 3. Use keyboard shortcuts to review:
     - **Space** — Reveal next side / Rate as Good
@@ -77,20 +77,21 @@ Note: Cards due later today are treated as due immediately (Anki-style). If a ca
 
 ## Commands
 
-| Command                                | Description                                  |
-| -------------------------------------- | -------------------------------------------- |
-| **Open dashboard**                     | Show the main flashcards dashboard           |
-| **Create new card**                    | Start the card creation flow                 |
-| **Start review**                       | Select a deck and begin studying             |
-| **Regenerate current card**            | Re-render the current card from its template |
-| **Create new template**                | Create a new flashcard template              |
-| **Regenerate all cards from template** | Batch regenerate all cards using a template  |
+| Command                                       | Description                                  |
+| --------------------------------------------- | -------------------------------------------- |
+| **Anker: Open dashboard**                     | Show the main Anker dashboard                |
+| **Anker: Create new card**                    | Start the card creation flow                 |
+| **Anker: Start review**                       | Select a deck and begin studying             |
+| **Anker: Regenerate current card**            | Re-render the current card from its template |
+| **Anker: Create new template**                | Create a new flashcard template              |
+| **Anker: Regenerate all cards from template** | Batch regenerate all cards using a template  |
+| **Anker: Delete unused attachments**          | Find and delete unused attachments           |
 
 ## Settings
 
 | Setting                      | Description                                                              | Default                |
 | ---------------------------- | ------------------------------------------------------------------------ | ---------------------- |
-| **Template folder**          | Folder containing template files                                         | `Templates/Flashcards` |
+| **Template folder**          | Folder containing template files                                         | `Anker/Templates` |
 | **Note name template**       | Filename pattern for new cards (`{{date}}`, `{{time}}`, `{{timestamp}}`) | `{{timestamp}}`        |
 | **Auto-regenerate debounce** | Seconds to wait before auto-regenerating after edits                     | `1`                    |
 | **Show only current side**   | Show only the current card side during review (vs. cumulative)           | `false`                |
@@ -104,7 +105,7 @@ Cards are Markdown files with YAML frontmatter:
 ```yaml
 ---
 type: flashcard
-template: "[[Templates/Flashcards/Basic]]"
+template: "[[Anker/Templates/Basic]]"
 fields:
     front: "What is the capital of France?"
     back: "Paris"

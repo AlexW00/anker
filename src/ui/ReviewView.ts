@@ -8,12 +8,12 @@ import {
 	debounce,
 	setIcon,
 } from "obsidian";
-import type FlashcardsPlugin from "../main";
+import type AnkerPlugin from "../main";
 import type { Flashcard } from "../types";
 import { Rating } from "../srs/Scheduler";
 import { registerReviewHotkeys } from "./ReviewHotkeys";
 
-export const REVIEW_VIEW_TYPE = "flashcards-review";
+export const REVIEW_VIEW_TYPE = "anker-review";
 
 interface ReviewSession {
 	deckPath: string;
@@ -27,12 +27,12 @@ interface ReviewSession {
  * Review view for studying flashcards.
  */
 export class ReviewView extends ItemView {
-	plugin: FlashcardsPlugin;
+	plugin: AnkerPlugin;
 	private session: ReviewSession | null = null;
 	private currentContent: string[] = [];
 	private debouncedReloadCard: () => void;
 
-	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: AnkerPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 		// Debounce reload to avoid excessive updates during editing

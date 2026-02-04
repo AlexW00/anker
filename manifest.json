@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-flashcards",
-	"name": "Obsidian Flashcards",
+	"id": "anker",
+	"name": "Anker",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Spaced repetition flashcards plugin for Obsidian with advanced scheduling algorithms.",
+	"description": "Anker — spaced repetition flashcards plugin for Obsidian with advanced scheduling algorithms.",
 	"author": "Alex Weichart",
 	"authorUrl": "https://github.com/alexweichart",
 	"isDesktopOnly": false

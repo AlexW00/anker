@@ -1,5 +1,5 @@
 import { Editor, MarkdownView, Notice, Plugin, TFile } from "obsidian";
-import { FlashcardsSettingTab } from "./settings";
+import { AnkerSettingTab } from "./settings";
 import {
 	DEFAULT_SETTINGS,
 	DEFAULT_STATE,
@@ -20,7 +20,7 @@ import { TemplateNameModal } from "./ui/TemplateNameModal";
 import { showCardCreationModal } from "./ui/CardCreationFlow";
 import { OrphanAttachmentsModal } from "./ui/OrphanAttachmentsModal";
 
-export default class FlashcardsPlugin extends Plugin {
+export default class AnkerPlugin extends Plugin {
 	settings: FlashcardsPluginSettings;
 	state: FlashcardsPluginState;
 	templateService: TemplateService;
@@ -116,7 +116,7 @@ export default class FlashcardsPlugin extends Plugin {
 		);
 
 		// Add ribbon icon
-		this.addRibbonIcon("layers", "Flashcards", () => {
+		this.addRibbonIcon("layers", "Anker", () => {
 			void this.openDashboard();
 		});
 
@@ -124,7 +124,7 @@ export default class FlashcardsPlugin extends Plugin {
 		this.registerCommands();
 
 		// Add settings tab
-		this.addSettingTab(new FlashcardsSettingTab(this.app, this));
+		this.addSettingTab(new AnkerSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -171,25 +171,25 @@ export default class FlashcardsPlugin extends Plugin {
 	private registerCommands() {
 		this.addCommand({
 			id: "open-dashboard",
-			name: "Open dashboard",
+			name: "Anker: Open dashboard",
 			callback: () => this.openDashboard(),
 		});
 
 		this.addCommand({
 			id: "create-card",
-			name: "Create new card",
+			name: "Anker: Create new card",
 			callback: () => this.createCard(),
 		});
 
 		this.addCommand({
 			id: "start-review",
-			name: "Start review",
+			name: "Anker: Start review",
 			callback: () => this.selectDeckForReview(),
 		});
 
 		this.addCommand({
 			id: "regenerate-card",
-			name: "Regenerate current card",
+			name: "Anker: Regenerate current card",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
 				if (file && this.deckService.isFlashcard(file)) {
@@ -204,19 +204,19 @@ export default class FlashcardsPlugin extends Plugin {
 
 		this.addCommand({
 			id: "create-template",
-			name: "Create new template",
+			name: "Anker: Create new template",
 			callback: () => this.createTemplate(),
 		});
 
 		this.addCommand({
 			id: "regenerate-all-from-template",
-			name: "Regenerate all cards from template",
+			name: "Anker: Regenerate all cards from template",
 			callback: () => this.selectTemplateForRegeneration(),
 		});
 
 		this.addCommand({
 			id: "delete-unused-attachments",
-			name: "Delete unused attachments",
+			name: "Anker: Delete unused attachments",
 			callback: () => this.deleteUnusedAttachments(),
 		});
 	}

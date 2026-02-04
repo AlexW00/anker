@@ -9,7 +9,7 @@ import {
 export { DEFAULT_SETTINGS } from "./types";
 export type { FlashcardsPluginSettings } from "./types";
 
-export class FlashcardsSettingTab extends PluginSettingTab {
+export class AnkerSettingTab extends PluginSettingTab {
 	plugin: Plugin & PluginWithSettings;
 
 	constructor(app: App, plugin: Plugin & PluginWithSettings) {
@@ -28,7 +28,7 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 			.setDesc("Folder for flashcard templates")
 			.addText((text) =>
 				text
-					.setPlaceholder("Flashcards/templates")
+					.setPlaceholder("Anker/Templates")
 					.setValue(this.plugin.settings.templateFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.templateFolder = value.trim();
@@ -41,7 +41,7 @@ export class FlashcardsSettingTab extends PluginSettingTab {
 			.setDesc("Folder for pasted images and media")
 			.addText((text) =>
 				text
-					.setPlaceholder("Flashcards/attachments")
+					.setPlaceholder("Anker/Attachments")
 					.setValue(this.plugin.settings.attachmentFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.attachmentFolder = value.trim();

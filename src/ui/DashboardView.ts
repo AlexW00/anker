@@ -5,23 +5,23 @@ import {
 	setIcon,
 	debounce,
 } from "obsidian";
-import type FlashcardsPlugin from "../main";
+import type AnkerPlugin from "../main";
 import type { Deck } from "../types";
 import { showCardCreationModal } from "./CardCreationFlow";
 import { DeckBaseViewService, type StateFilter } from "./DeckBaseViewService";
 
-export const DASHBOARD_VIEW_TYPE = "flashcards-dashboard";
+export const DASHBOARD_VIEW_TYPE = "anker-dashboard";
 
 /**
  * Main dashboard view showing decks and their stats.
  */
 export class DashboardView extends ItemView {
-	plugin: FlashcardsPlugin;
+	plugin: AnkerPlugin;
 	private debouncedRender: () => void;
 	private deckBaseViewService: DeckBaseViewService;
 	private collapsedDeckPaths = new Set<string>();
 
-	constructor(leaf: WorkspaceLeaf, plugin: FlashcardsPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: AnkerPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 		this.debouncedRender = debounce(() => void this.render(), 300, true);
@@ -36,7 +36,7 @@ export class DashboardView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "Flashcards";
+		return "Anker";
 	}
 
 	getIcon(): string {
@@ -77,7 +77,7 @@ export class DashboardView extends ItemView {
 			cls: "flashcard-dashboard-header",
 		});
 
-		header.createEl("h2", { text: "Flashcards" });
+		header.createEl("h2", { text: "Anker" });
 
 		const toolbar = header.createDiv({
 			cls: "flashcard-dashboard-toolbar",
