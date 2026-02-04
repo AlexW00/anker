@@ -727,7 +727,20 @@ export class AnkiImportService {
 				const ext = this.getFileExtension(originalName);
 				const uuidFilename = `${uuid}${ext}`;
 
-				const mediaBuffer = await mediaZipFile.async("arraybuffer");
+				let mediaBuffer = await mediaZipFile.async("arraybuffer");
+				let mediaBytes = new Uint8Array(mediaBuffer);
+				// Detect zstd-compressed media (magic bytes: 28 b5 2f fd)
+				if (
+					mediaBytes.length >= 4 &&
+					mediaBytes[0] === 0x28 &&
+					mediaBytes[1] === 0xb5 &&
+					mediaBytes[2] === 0x2f &&
+					mediaBytes[3] === 0xfd
+				) {
+					const decompressed = zstdDecompress(mediaBytes);
+					mediaBytes = decompressed;
+					mediaBuffer = decompressed.slice().buffer;
+				}
 				const mediaPath = `${this.settings.attachmentFolder}/${uuidFilename}`;
 
 				// Ensure folder exists

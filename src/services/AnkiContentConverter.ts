@@ -101,6 +101,9 @@ export class AnkiContentConverter {
 		// Post-process: Convert cloze deletions to highlights
 		markdown = this.convertClozes(markdown);
 
+		// Post-process: Unescape Obsidian embed wiki links
+		markdown = this.unescapeWikiEmbeds(markdown);
+
 		// Clean up excessive whitespace
 		markdown = this.cleanupWhitespace(markdown);
 
@@ -188,5 +191,14 @@ export class AnkiContentConverter {
 				// Trim leading/trailing whitespace
 				.trim()
 		);
+	}
+
+	/**
+	 * Unescape Obsidian embed wiki links like !\[\[file\]\] -> ![[file]].
+	 */
+	private unescapeWikiEmbeds(markdown: string): string {
+		return markdown
+			.replace(/!\\\[\\\[/g, "![[")
+			.replace(/\\\]\\\]/g, "]]");
 	}
 }

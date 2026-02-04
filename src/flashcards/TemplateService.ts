@@ -87,6 +87,7 @@ export class TemplateService {
 
 		const variableRegex =
 			/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|[^}]*)?\}\}/g;
+			const fieldsAccessRegex = /_fields\s*\[\s*["']([^"']+)["']\s*\]/g;
 		const variables = new Map<string, TemplateVariable>();
 
 		let match;
@@ -103,6 +104,14 @@ export class TemplateService {
 					variables.set(name, { name });
 				}
 			}
+
+			while ((match = fieldsAccessRegex.exec(contentWithoutComments)) !== null) {
+				const name = match[1];
+				if (!name) continue;
+				if (!variables.has(name)) {
+					variables.set(name, { name });
+				}
+			}
 		}
 
 		return Array.from(variables.values());
@@ -112,7 +121,10 @@ export class TemplateService {
 	 * Render a template with the given fields.
 	 */
 	render(templateContent: string, fields: Record<string, string>): string {
-		return this.env.renderString(templateContent, fields);
+		return this.env.renderString(templateContent, {
+			...fields,
+			_fields: fields,
+		});
 	}
 
 	/**

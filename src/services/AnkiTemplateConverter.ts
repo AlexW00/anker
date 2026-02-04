@@ -28,8 +28,8 @@ export interface ConvertedTemplate {
  */
 export class AnkiTemplateConverter {
 	private turndown: TurndownService;
-	private placeholderPrefix = "__ANKI_VAR_";
-	private placeholderSuffix = "__";
+	private placeholderPrefix = "ANKITOKEN";
+	private placeholderSuffix = "END";
 
 	constructor() {
 		this.turndown = new TurndownService({
@@ -220,7 +220,7 @@ export class AnkiTemplateConverter {
 
 		for (const [token, original] of tokens) {
 			const transpiled = this.transpileToNunjucks(original);
-			result = result.replace(token, transpiled);
+			result = result.split(token).join(transpiled);
 		}
 
 		return result;
@@ -248,10 +248,10 @@ export class AnkiTemplateConverter {
 		// Handle special prefixes
 		if (prefix === "#") {
 			// Conditional (if field exists/has content)
-			return `{% if ${content} %}`;
+			return `{% if ${this.formatFieldAccess(content)} %}`;
 		} else if (prefix === "^") {
 			// Negation (if field doesn't exist/empty)
-			return `{% if not ${content} %}`;
+			return `{% if not ${this.formatFieldAccess(content)} %}`;
 		} else if (prefix === "/") {
 			// End conditional
 			return "{% endif %}";
@@ -267,11 +267,20 @@ export class AnkiTemplateConverter {
 		if (content.includes(":")) {
 			const parts = content.split(":");
 			const fieldName = parts[parts.length - 1]?.trim() ?? content;
-			return `{{ ${fieldName} }}`;
+			return `{{ ${this.formatFieldAccess(fieldName)} }}`;
 		}
 
 		// Regular field reference
-		return `{{ ${content} }}`;
+		return `{{ ${this.formatFieldAccess(content)} }}`;
+	}
+
+	/**
+	 * Format field access for Nunjucks using a safe lookup.
+	 */
+	private formatFieldAccess(fieldName: string): string {
+		const trimmed = fieldName.trim();
+		const safeName = JSON.stringify(trimmed);
+		return `_fields[${safeName}]`;
 	}
 
 	/**
@@ -280,6 +289,7 @@ export class AnkiTemplateConverter {
 	private extractVariables(template: string): string[] {
 		const variableRegex =
 			/\{\{\s*([a-zA-Z_][a-zA-Z0-9_\s]*)\s*(?:\|[^}]*)?\}\}/g;
+		const fieldsAccessRegex = /_fields\s*\[\s*["']([^"']+)["']\s*\]/g;
 		const variables = new Set<string>();
 
 		let match;
@@ -300,6 +310,12 @@ export class AnkiTemplateConverter {
 			if (!skip.includes(name)) {
 				variables.add(name);
 			}
+		}
+
+		while ((match = fieldsAccessRegex.exec(template)) !== null) {
+			const name = match[1]?.trim();
+			if (!name) continue;
+			variables.add(name);
 		}
 
 		return Array.from(variables);
