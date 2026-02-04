@@ -4,6 +4,7 @@ import { debugLog, PROTECTION_COMMENT } from "../types";
 import type { CardService } from "../flashcards/CardService";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
+import { FailedCardsModal, type FailedCard } from "../ui/FailedCardsModal";
 
 /**
  * Configuration for the CardRegenService.
@@ -497,8 +498,8 @@ export class CardRegenService {
 		const templateName = template?.name ?? templatePath;
 
 		let successCount = 0;
-		let errorCount = 0;
 		let completedCount = 0;
+		const failedCards: FailedCard[] = [];
 
 		// Show initial progress notice
 		const cacheNote = skipCache ? " (no cache)" : "";
@@ -514,22 +515,42 @@ export class CardRegenService {
 
 			// Create a queue of promises that process in batches
 			const processCard = async (cardPath: string) => {
+				const file = this.app.vault.getAbstractFileByPath(cardPath);
+				if (!(file instanceof TFile)) {
+					// File not found - can't write error to frontmatter
+					completedCount++;
+					notice.setMessage(
+						`Regenerating ${completedCount}/${cards.length} cards from "${templateName}"${cacheNote}...`,
+					);
+					return;
+				}
+
 				try {
-					const file = this.app.vault.getAbstractFileByPath(cardPath);
-					if (file instanceof TFile) {
-						await this.cardService.regenerateCard(file, {
-							skipCache,
-						});
-						successCount++;
-					} else {
-						errorCount++;
-					}
-				} catch (error) {
+					await this.cardService.regenerateCard(file, {
+						skipCache,
+					});
+					// Clear any previous error on successful regeneration
+					await this.cardService.clearCardError(file);
+					successCount++;
+				} catch (regenError) {
+					const errorMessage =
+						regenError instanceof Error
+							? regenError.message
+							: String(regenError);
 					console.error(
 						`Failed to regenerate card ${cardPath}:`,
-						error,
+						regenError,
 					);
-					errorCount++;
+					// Write error to card frontmatter
+					try {
+						await this.cardService.setCardError(file, errorMessage);
+					} catch (writeError) {
+						console.error(
+							`Failed to write error to card ${cardPath}:`,
+							writeError,
+						);
+					}
+					failedCards.push({ file, error: errorMessage });
 				}
 				completedCount++;
 				// Update progress notice
@@ -548,14 +569,33 @@ export class CardRegenService {
 			notice.hide();
 
 			// Show completion notice
-			if (errorCount === 0) {
+			if (failedCards.length === 0) {
 				new Notice(
-					`Successfully regenerated ${successCount} card${successCount > 1 ? "s" : ""} from "${templateName}".`,
+					`Successfully regenerated ${successCount} card${successCount !== 1 ? "s" : ""} from "${templateName}".`,
 				);
 			} else {
-				new Notice(
-					`Regenerated ${successCount} card${successCount > 1 ? "s" : ""}, ${errorCount} failed.`,
-				);
+				// Show notice with button to view failed cards
+				const resultNotice = new Notice("", 8000);
+				resultNotice.messageEl.empty();
+				const container = resultNotice.messageEl.createDiv({
+					cls: "flashcard-notice-container",
+				});
+
+				container.createSpan({
+					text: `Regenerated ${successCount} card${successCount !== 1 ? "s" : ""}, ${failedCards.length} failed.`,
+					cls: "flashcard-notice-text",
+				});
+
+				const buttons = container.createDiv({
+					cls: "flashcard-notice-buttons",
+				});
+
+				new ButtonComponent(buttons)
+					.setButtonText("View failed")
+					.onClick(() => {
+						resultNotice.hide();
+						new FailedCardsModal(this.app, failedCards).open();
+					});
 			}
 		}
 	}

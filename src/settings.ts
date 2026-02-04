@@ -9,7 +9,9 @@ import {
 	DECK_VIEW_COLUMN_LABELS,
 	DEFAULT_BASIC_TEMPLATE,
 	DEFAULT_SETTINGS,
+	debugLog,
 } from "./types";
+import { getDefaultTextModel } from "./services/aiModelDefaults";
 
 export { DEFAULT_SETTINGS } from "./types";
 export type { FlashcardsPluginSettings } from "./types";
@@ -18,9 +20,9 @@ export type { FlashcardsPluginSettings } from "./types";
  * Extended plugin interface for settings tab with SecretStorage access.
  */
 export interface PluginWithSettingsAndSecrets extends PluginWithSettings {
-	getApiKey(provider: AiProviderType): string | null;
-	setApiKey(provider: AiProviderType, key: string): void;
-	deleteApiKey(provider: AiProviderType): void;
+	getApiKey(provider: AiProviderType): Promise<string | null>;
+	setApiKey(provider: AiProviderType, key: string): Promise<void>;
+	deleteApiKey(provider: AiProviderType): Promise<void>;
 }
 
 export class AnkerSettingTab extends PluginSettingTab {
@@ -317,6 +319,13 @@ export class AnkerSettingTab extends PluginSettingTab {
 				}),
 			);
 
+		// AI Pipes section
+		new Setting(containerEl).setName("AI pipes").setHeading();
+
+		// Render AI provider settings
+		const aiContainer = containerEl.createDiv();
+		this.renderAiProviderSettings(aiContainer);
+
 		new Setting(containerEl).setName("Deck view").setHeading();
 
 		new Setting(containerEl)
@@ -327,19 +336,6 @@ export class AnkerSettingTab extends PluginSettingTab {
 
 		const columnsContainer = containerEl.createDiv();
 		this.renderColumnSettings(columnsContainer);
-
-		// AI Providers section
-		new Setting(containerEl).setName("AI providers").setHeading();
-
-		new Setting(containerEl)
-			.setName("AI pipes")
-			.setDesc(
-				"Configure AI providers for dynamic content generation in templates. Use {{ prompt | askAi }}, {{ prompt | generateImage }}, or {{ text | generateSpeech }} in your templates.",
-			);
-
-		// Render AI provider settings
-		const aiContainer = containerEl.createDiv();
-		this.renderAiProviderSettings(aiContainer);
 	}
 
 	/**
@@ -383,6 +379,90 @@ export class AnkerSettingTab extends PluginSettingTab {
 		const providers = this.plugin.settings.aiProviders ?? {};
 		const providerIds = Object.keys(providers);
 
+		new Setting(container)
+			.setName("About AI pipes")
+			.setDesc(
+				"AI pipes connect template filters to a configured provider, so prompts in your templates can generate text, images, or speech.",
+			);
+
+		new Setting(container)
+			.setName("Ask AI provider")
+			.setDesc("Provider for {{ prompt | askAi }} filter")
+			.addDropdown((dropdown) => {
+				dropdown.addOption("", "Select provider...");
+				for (const id of providerIds) {
+					const config = providers[id];
+					dropdown.addOption(
+						id,
+						`${config?.type ?? "unknown"} (${config?.textModel ?? "default"})`,
+					);
+				}
+				dropdown.setValue(
+					this.plugin.settings.aiPipeProviders?.askAi ?? "",
+				);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.aiPipeProviders = {
+						...this.plugin.settings.aiPipeProviders,
+						askAi: value || undefined,
+					};
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(container)
+			.setName("Generate image provider")
+			.setDesc("Provider for {{ prompt | generateImage }} filter")
+			.addDropdown((dropdown) => {
+				dropdown.addOption("", "Select provider...");
+				for (const id of providerIds) {
+					const config = providers[id];
+					// Only OpenAI supports image generation
+					if (config?.type === "openai") {
+						dropdown.addOption(
+							id,
+							`${config.type} (${config.imageModel ?? "dall-e-3"})`,
+						);
+					}
+				}
+				dropdown.setValue(
+					this.plugin.settings.aiPipeProviders?.generateImage ?? "",
+				);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.aiPipeProviders = {
+						...this.plugin.settings.aiPipeProviders,
+						generateImage: value || undefined,
+					};
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(container)
+			.setName("Generate speech provider")
+			.setDesc("Provider for {{ text | generateSpeech }} filter")
+			.addDropdown((dropdown) => {
+				dropdown.addOption("", "Select provider...");
+				for (const id of providerIds) {
+					const config = providers[id];
+					// Only OpenAI supports speech generation
+					if (config?.type === "openai") {
+						dropdown.addOption(
+							id,
+							`${config.type} (${config.speechModel ?? "tts-1"})`,
+						);
+					}
+				}
+				dropdown.setValue(
+					this.plugin.settings.aiPipeProviders?.generateSpeech ?? "",
+				);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.aiPipeProviders = {
+						...this.plugin.settings.aiPipeProviders,
+						generateSpeech: value || undefined,
+					};
+					await this.plugin.saveSettings();
+				});
+			});
+
 		// Add provider button
 		new Setting(container)
 			.setName("Add provider")
@@ -398,7 +478,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 							...this.plugin.settings.aiProviders,
 							[id]: {
 								type: "openai",
-								textModel: "gpt-4o",
+								textModel: getDefaultTextModel("openai"),
 							},
 						};
 						await this.plugin.saveSettings();
@@ -406,97 +486,16 @@ export class AnkerSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		if (providerIds.length > 0) {
+			container.createEl("hr");
+		}
+
 		// Render each provider
 		for (const id of providerIds) {
 			const config = providers[id];
 			if (!config) continue;
 
 			this.renderSingleProvider(container, id, config);
-		}
-
-		// Pipe provider selection
-		if (providerIds.length > 0) {
-			new Setting(container).setName("Pipe assignments").setHeading();
-
-			new Setting(container)
-				.setName("Ask AI provider")
-				.setDesc("Provider for {{ prompt | askAi }} filter")
-				.addDropdown((dropdown) => {
-					dropdown.addOption("", "Select provider...");
-					for (const id of providerIds) {
-						const config = providers[id];
-						dropdown.addOption(
-							id,
-							`${config?.type ?? "unknown"} (${config?.textModel ?? "default"})`,
-						);
-					}
-					dropdown.setValue(
-						this.plugin.settings.aiPipeProviders?.askAi ?? "",
-					);
-					dropdown.onChange(async (value) => {
-						this.plugin.settings.aiPipeProviders = {
-							...this.plugin.settings.aiPipeProviders,
-							askAi: value || undefined,
-						};
-						await this.plugin.saveSettings();
-					});
-				});
-
-			new Setting(container)
-				.setName("Generate image provider")
-				.setDesc("Provider for {{ prompt | generateImage }} filter")
-				.addDropdown((dropdown) => {
-					dropdown.addOption("", "Select provider...");
-					for (const id of providerIds) {
-						const config = providers[id];
-						// Only OpenAI supports image generation
-						if (config?.type === "openai") {
-							dropdown.addOption(
-								id,
-								`${config.type} (${config.imageModel ?? "dall-e-3"})`,
-							);
-						}
-					}
-					dropdown.setValue(
-						this.plugin.settings.aiPipeProviders?.generateImage ??
-							"",
-					);
-					dropdown.onChange(async (value) => {
-						this.plugin.settings.aiPipeProviders = {
-							...this.plugin.settings.aiPipeProviders,
-							generateImage: value || undefined,
-						};
-						await this.plugin.saveSettings();
-					});
-				});
-
-			new Setting(container)
-				.setName("Generate speech provider")
-				.setDesc("Provider for {{ text | generateSpeech }} filter")
-				.addDropdown((dropdown) => {
-					dropdown.addOption("", "Select provider...");
-					for (const id of providerIds) {
-						const config = providers[id];
-						// Only OpenAI supports speech generation
-						if (config?.type === "openai") {
-							dropdown.addOption(
-								id,
-								`${config.type} (${config.speechModel ?? "tts-1"})`,
-							);
-						}
-					}
-					dropdown.setValue(
-						this.plugin.settings.aiPipeProviders?.generateSpeech ??
-							"",
-					);
-					dropdown.onChange(async (value) => {
-						this.plugin.settings.aiPipeProviders = {
-							...this.plugin.settings.aiPipeProviders,
-							generateSpeech: value || undefined,
-						};
-						await this.plugin.saveSettings();
-					});
-				});
 		}
 	}
 
@@ -515,7 +514,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 		// Provider header with delete button
 		new Setting(providerContainer)
 			.setName(`Provider: ${config.type}`)
-			.setDesc(`ID: ${id}`)
+			.setDesc(this.getProviderCapabilitiesDescription(config.type))
 			.addButton((button) =>
 				button
 					.setButtonText("Delete")
@@ -544,7 +543,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 								undefined;
 						}
 						// Delete API key from SecretStorage
-						this.plugin.deleteApiKey(config.type);
+						await this.plugin.deleteApiKey(config.type);
 						await this.plugin.saveSettings();
 						// Re-render parent container
 						const parent = container;
@@ -556,14 +555,26 @@ export class AnkerSettingTab extends PluginSettingTab {
 		new Setting(providerContainer)
 			.setName("Provider type")
 			.addDropdown((dropdown) => {
-				dropdown.addOption("openai", "Openai");
+				dropdown.addOption("openai", "OpenAI");
 				dropdown.addOption("anthropic", "Anthropic");
 				dropdown.addOption("google", "Google");
+				dropdown.addOption("openrouter", "OpenRouter");
 				dropdown.setValue(config.type);
 				dropdown.onChange(async (value) => {
+					const nextType = value as AiProviderType;
+					const trimmedTextModel = config.textModel?.trim();
+					const isDefaultModel =
+						!trimmedTextModel ||
+						trimmedTextModel ===
+							getDefaultTextModel(config.type);
+					const nextTextModel = isDefaultModel
+						? getDefaultTextModel(nextType)
+						: config.textModel;
+
 					this.plugin.settings.aiProviders[id] = {
 						...config,
-						type: value as AiProviderType,
+						type: nextType,
+						textModel: nextTextModel,
 					};
 					await this.plugin.saveSettings();
 					this.renderAiProviderSettings(container);
@@ -578,24 +589,53 @@ export class AnkerSettingTab extends PluginSettingTab {
 				text.inputEl.type = "password";
 				text.setPlaceholder("Enter API key...");
 
-				// Load current key status (sync)
-				const key = this.plugin.getApiKey(config.type);
-				if (key) {
-					text.setPlaceholder("••••••••••••••••");
-				}
-
-				text.onChange((value) => {
-					if (value.trim()) {
-						this.plugin.setApiKey(config.type, value.trim());
-						new Notice("API key saved securely");
-						text.setValue("");
+				// Load current key status (async)
+				let currentKey: string | null = null;
+				void this.plugin.getApiKey(config.type).then((value) => {
+					currentKey = value;
+					if (currentKey) {
 						text.setPlaceholder("••••••••••••••••");
 					}
 				});
+
+				let pendingKey = "";
+				text.onChange((value) => {
+					pendingKey = value.trim();
+				});
+
+				text.inputEl.addEventListener("keydown", (event) => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						text.inputEl.blur();
+					}
+				});
+
+				text.inputEl.addEventListener("blur", async () => {
+					if (!pendingKey) {
+						return;
+					}
+					if (pendingKey === currentKey) {
+						text.setValue("");
+						text.setPlaceholder("••••••••••••••••");
+						pendingKey = "";
+						return;
+					}
+					debugLog(
+						"Settings: saving API key for %s (len=%s)",
+						config.type,
+						pendingKey.length,
+					);
+					await this.plugin.setApiKey(config.type, pendingKey);
+					currentKey = pendingKey;
+					pendingKey = "";
+					new Notice("API key saved securely");
+					text.setValue("");
+					text.setPlaceholder("••••••••••••••••");
+				});
 			})
 			.addButton((button) =>
-				button.setButtonText("Clear").onClick(() => {
-					this.plugin.deleteApiKey(config.type);
+				button.setButtonText("Clear").onClick(async () => {
+					await this.plugin.deleteApiKey(config.type);
 					new Notice("API key removed");
 					this.renderAiProviderSettings(container);
 				}),
@@ -604,16 +644,40 @@ export class AnkerSettingTab extends PluginSettingTab {
 		// Text model
 		new Setting(providerContainer).setName("Text model").addText((text) =>
 			text
-				.setPlaceholder(this.getDefaultTextModel(config.type))
+				.setPlaceholder(getDefaultTextModel(config.type))
 				.setValue(config.textModel ?? "")
-				.onChange(async (value) => {
-					this.plugin.settings.aiProviders[id] = {
-						...config,
-						textModel: value.trim() || undefined,
-					};
-					await this.plugin.saveSettings();
+				.onChange((value) => {
+					pendingTextModel = value;
 				}),
 		);
+
+		let currentTextModel = config.textModel ?? "";
+		let pendingTextModel = currentTextModel;
+		const textModelInput = providerContainer.querySelector(
+			"input[type='text']",
+		) as HTMLInputElement | null;
+		if (textModelInput) {
+			textModelInput.addEventListener("keydown", (event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					textModelInput.blur();
+				}
+			});
+
+			textModelInput.addEventListener("blur", async () => {
+				const nextValue = pendingTextModel.trim();
+				if (nextValue === currentTextModel) {
+					return;
+				}
+				currentTextModel = nextValue;
+				this.plugin.settings.aiProviders[id] = {
+					...config,
+					textModel: nextValue || undefined,
+				};
+				await this.plugin.saveSettings();
+				this.renderAiProviderSettings(container);
+			});
+		}
 
 		// Image model (OpenAI only)
 		if (config.type === "openai") {
@@ -693,24 +757,21 @@ export class AnkerSettingTab extends PluginSettingTab {
 		providerContainer.createEl("hr");
 	}
 
-	/**
-	 * Get default text model for provider type.
-	 */
-	private getDefaultTextModel(type: AiProviderType): string {
-		switch (type) {
-			case "openai":
-				return "gpt-4o";
-			case "anthropic":
-				return "claude-sonnet-4-20250514";
-			case "google":
-				return "gemini-1.5-flash";
-			default:
-				return "gpt-4o";
-		}
-	}
-
 	private formatSteps(steps: Array<string | number>): string {
 		return steps.map((step) => String(step)).join(", ");
+	}
+
+	private getProviderCapabilitiesDescription(type: AiProviderType): string {
+		switch (type) {
+			case "openai":
+				return "Text, image, and speech (supports all pipes).";
+			case "anthropic":
+			case "google":
+			case "openrouter":
+				return "Text only (not available for image or speech pipes).";
+			default:
+				return "Text only.";
+		}
 	}
 
 	private parseSteps(value: string): Array<string | number> {

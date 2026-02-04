@@ -14,7 +14,7 @@ All pipes are async and run during template rendering.
 
 Providers are configured in **Settings → AI providers**. Each provider includes:
 
-- Provider type (OpenAI, Anthropic, Google)
+- Provider type (OpenAI, Anthropic, Google, OpenRouter)
 - Text model (for askAi)
 - Image model (OpenAI only)
 - Speech model + voice (OpenAI only)
@@ -23,6 +23,8 @@ Providers are configured in **Settings → AI providers**. Each provider include
 Per-pipe provider selection is configured in **Pipe assignments**.
 
 API keys are stored in Obsidian’s SecretStorage (not in the settings file).
+
+Default model IDs are centralized in [src/services/aiModelDefaults.ts](src/services/aiModelDefaults.ts) for easy editing.
 
 ## Caching
 

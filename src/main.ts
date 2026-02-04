@@ -5,7 +5,9 @@ import {
 	DEFAULT_STATE,
 	type FlashcardsPluginSettings,
 	type FlashcardsPluginState,
+	type FlashcardTemplate,
 	type AiProviderType,
+	debugLog,
 } from "./types";
 import { TemplateService } from "./flashcards/TemplateService";
 import { CardService } from "./flashcards/CardService";
@@ -207,43 +209,83 @@ export default class AnkerPlugin extends Plugin {
 	/**
 	 * Get an API key from SecretStorage.
 	 */
-	getApiKey(provider: AiProviderType): string | null {
+	async getApiKey(provider: AiProviderType): Promise<string | null> {
 		const key = `${API_KEY_PREFIX}${provider}`;
-		// Use Obsidian's SecretStorage API (sync) - available in 1.11.4+
-		const secrets = (
+		// Use Obsidian's SecretStorage API - available in 1.11.4+
+		const secretStorage = (
 			this.app as unknown as {
-				secrets?: { getSecret: (id: string) => string | null };
+				secretStorage?: {
+					getSecret(id: string): string | null;
+					setSecret(id: string, secret: string): void;
+					listSecrets(): string[];
+				};
 			}
-		).secrets;
-		return secrets?.getSecret(key) ?? null;
+		).secretStorage;
+		debugLog("SecretStorage get: %s available=%s", key, !!secretStorage);
+		if (!secretStorage) {
+			return null;
+		}
+		const value = secretStorage.getSecret(key);
+		debugLog(
+			"SecretStorage get result: %s (len=%s)",
+			key,
+			value ? String(value).length : 0,
+		);
+		return value ?? null;
 	}
 
 	/**
 	 * Store an API key in SecretStorage.
 	 */
-	setApiKey(provider: AiProviderType, apiKey: string): void {
+	async setApiKey(provider: AiProviderType, apiKey: string): Promise<void> {
 		const key = `${API_KEY_PREFIX}${provider}`;
-		// Use Obsidian's SecretStorage API (sync) - available in 1.11.4+
-		const secrets = (
+		// Use Obsidian's SecretStorage API - available in 1.11.4+
+		const secretStorage = (
 			this.app as unknown as {
-				secrets?: { setSecret: (id: string, secret: string) => void };
+				secretStorage?: {
+					getSecret(id: string): string | null;
+					setSecret(id: string, secret: string): void;
+					listSecrets(): string[];
+				};
 			}
-		).secrets;
-		secrets?.setSecret(key, apiKey);
+		).secretStorage;
+		debugLog(
+			"SecretStorage set: %s available=%s (len=%s)",
+			key,
+			!!secretStorage,
+			apiKey.length,
+		);
+		if (!secretStorage) {
+			return;
+		}
+		secretStorage.setSecret(key, apiKey);
 	}
 
 	/**
 	 * Delete an API key from SecretStorage.
 	 */
-	deleteApiKey(provider: AiProviderType): void {
+	async deleteApiKey(provider: AiProviderType): Promise<void> {
 		const key = `${API_KEY_PREFIX}${provider}`;
-		// Use Obsidian's SecretStorage API - set empty string to "delete"
-		const secrets = (
+		// Use Obsidian's SecretStorage API - available in 1.11.4+
+		const secretStorage = (
 			this.app as unknown as {
-				secrets?: { setSecret: (id: string, secret: string) => void };
+				secretStorage?: {
+					getSecret(id: string): string | null;
+					setSecret(id: string, secret: string): void;
+					listSecrets(): string[];
+				};
 			}
-		).secrets;
-		secrets?.setSecret(key, "");
+		).secretStorage;
+		debugLog(
+			"SecretStorage delete: %s available=%s",
+			key,
+			!!secretStorage,
+		);
+		if (!secretStorage) {
+			return;
+		}
+		// SecretStorage doesn't have deleteSecret, so set to empty string
+		secretStorage.setSecret(key, "");
 	}
 
 	/**
@@ -259,7 +301,9 @@ export default class AnkerPlugin extends Plugin {
 		this.addCommand({
 			id: "create-card",
 			name: "Create new card",
-			callback: () => this.createCard(),
+			callback: () => {
+				void this.createCard();
+			},
 		});
 
 		this.addCommand({
@@ -426,7 +470,15 @@ export default class AnkerPlugin extends Plugin {
 	 * Start the card creation flow.
 	 * Opens the CardFormModal directly with deck/template selectors embedded.
 	 */
-	private createCard() {
+	private async createCard() {
+		let initialTemplate: FlashcardTemplate | undefined;
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && this.isTemplateFile(activeFile)) {
+			initialTemplate =
+				(await this.templateService.loadTemplate(activeFile.path)) ??
+				undefined;
+		}
+
 		showCardCreationModal(
 			this.app,
 			this.cardService,
@@ -435,6 +487,20 @@ export default class AnkerPlugin extends Plugin {
 			this.settings,
 			this.state,
 			() => this.saveState(),
+			undefined,
+			undefined,
+			initialTemplate,
+		);
+	}
+
+	/**
+	 * Check if a file is a template file (in the template folder).
+	 */
+	private isTemplateFile(file: TFile): boolean {
+		const templateFolder = this.settings.templateFolder;
+		return (
+			file.path.startsWith(templateFolder + "/") ||
+			file.path === templateFolder
 		);
 	}
 

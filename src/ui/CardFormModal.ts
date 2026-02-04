@@ -33,6 +33,12 @@ function generateUUID(): string {
 /**
  * Options for the CardFormModal.
  */
+/**
+ * Callback for status updates during card creation/update.
+ * @param status - The current status message (empty string to clear)
+ */
+export type StatusCallback = (status: string) => void;
+
 export interface CardFormModalOptions {
 	app: App;
 	deckService: DeckService;
@@ -48,13 +54,15 @@ export interface CardFormModalOptions {
 		deckPath: string,
 		templatePath: string,
 		createAnother: boolean,
-	) => void;
+		statusCallback: StatusCallback,
+	) => Promise<void> | void;
 	/** Called when saving updates in edit mode. */
 	onUpdate?: (
 		fields: Record<string, string>,
 		deckPath: string,
 		templatePath: string,
-	) => void;
+		statusCallback: StatusCallback,
+	) => Promise<void> | void;
 	/** Initial deck path (optional, uses last used or first available) */
 	initialDeckPath?: string;
 	/** Initial template (optional, uses last used or first available) */
@@ -168,6 +176,11 @@ export class CardFormModal extends Modal {
 	private activeTextarea: HTMLTextAreaElement | null = null;
 	private textareaSuggests: TextareaSuggest[] = [];
 	private deckSuggest: DeckPathSuggest | null = null;
+	private isSubmitting = false;
+	private createButton: ButtonComponent | null = null;
+	private cancelButton: ButtonComponent | null = null;
+	private createAnotherCheckbox: HTMLInputElement | null = null;
+	private statusTextEl: HTMLElement | null = null;
 
 	constructor(options: CardFormModalOptions) {
 		super(options.app);
@@ -429,20 +442,25 @@ export class CardFormModal extends Modal {
 		}
 
 		// 3. Sticky Footer
-		const buttonContainer = contentEl.createDiv({
-			cls: "flashcard-modal-buttons-v2 flashcard-modal-sticky-footer",
+		const footerContainer = contentEl.createDiv({
+			cls: "flashcard-modal-sticky-footer",
+		});
+
+		// Buttons row
+		const buttonRow = footerContainer.createDiv({
+			cls: "flashcard-modal-buttons-row",
 		});
 
 		// Cancel button (left side)
-		const leftButtons = buttonContainer.createDiv({
+		const leftButtons = buttonRow.createDiv({
 			cls: "flashcard-buttons-left",
 		});
-		new ButtonComponent(leftButtons)
+		this.cancelButton = new ButtonComponent(leftButtons)
 			.setButtonText("Cancel")
 			.onClick(() => this.close());
 
 		// Create buttons (right side)
-		const rightButtons = buttonContainer.createDiv({
+		const rightButtons = buttonRow.createDiv({
 			cls: "flashcard-buttons-right",
 		});
 
@@ -453,22 +471,27 @@ export class CardFormModal extends Modal {
 					title: "Keep this dialog open after creating a card",
 				},
 			});
-			const createAnotherCheckbox = createAnotherLabel.createEl("input", {
+			this.createAnotherCheckbox = createAnotherLabel.createEl("input", {
 				type: "checkbox",
 			});
-			createAnotherCheckbox.checked = this.createAnother;
-			createAnotherCheckbox.addEventListener("change", () => {
-				this.createAnother = createAnotherCheckbox.checked;
+			this.createAnotherCheckbox.checked = this.createAnother;
+			this.createAnotherCheckbox.addEventListener("change", () => {
+				this.createAnother = this.createAnotherCheckbox?.checked ?? false;
 			});
 			createAnotherLabel.createSpan({ text: "Create another" });
 		}
 
-		new ButtonComponent(rightButtons)
+		this.createButton = new ButtonComponent(rightButtons)
 			.setButtonText(isEditMode ? "Save" : "Create")
 			.setCta()
 			.onClick(() => {
-				this.submitCard(this.createAnother);
+				void this.submitCard(this.createAnother);
 			});
+
+		// Status text (shown below buttons during submission)
+		this.statusTextEl = footerContainer.createDiv({
+			cls: "flashcard-modal-status-text",
+		});
 
 		// Focus first field
 		const firstInput = contentEl.querySelector("textarea");
@@ -476,53 +499,125 @@ export class CardFormModal extends Modal {
 			firstInput.focus();
 			this.activeTextarea = firstInput;
 		}
+
+		this.applySubmittingState();
 	}
 
-	private submitCard(createAnother: boolean) {
-		if (this.mode === "edit") {
-			if (!this.isValidDeckPath(this.currentDeckPath)) {
-				new Notice("Select an existing folder for the deck.");
-				return;
-			}
-			if (!this.onUpdate) {
-				new Notice("No update handler provided.");
-				return;
-			}
-			this.onUpdate(
-				{ ...this.fields },
-				this.currentDeckPath,
-				this.currentTemplate.path,
-			);
-			this.close();
-			return;
-		}
+	private async submitCard(createAnother: boolean): Promise<void> {
+		if (this.isSubmitting) return;
 
 		if (!this.isValidDeckPath(this.currentDeckPath)) {
 			new Notice("Select an existing folder for the deck.");
 			return;
 		}
 
-		if (createAnother) {
-			this.onSubmit(
-				{ ...this.fields },
-				this.currentDeckPath,
-				this.currentTemplate.path,
-				true,
-			);
-			// Clear fields for next card
-			for (const variable of this.currentTemplate.variables) {
-				this.fields[variable.name] = "";
-			}
-			this.renderContent();
-		} else {
-			this.close();
-			this.onSubmit(
-				this.fields,
-				this.currentDeckPath,
-				this.currentTemplate.path,
-				false,
-			);
+		if (this.mode === "edit" && !this.onUpdate) {
+			new Notice("No update handler provided.");
+			return;
 		}
+
+		this.setSubmitting(true);
+
+		// Status callback to update the status text
+		const statusCallback: StatusCallback = (status: string) => {
+			this.setStatusText(status);
+		};
+
+		try {
+			if (this.mode === "edit") {
+				await Promise.resolve(
+					this.onUpdate?.(
+						{ ...this.fields },
+						this.currentDeckPath,
+						this.currentTemplate.path,
+						statusCallback,
+					),
+				);
+				this.close();
+				return;
+			}
+
+			await Promise.resolve(
+				this.onSubmit(
+					{ ...this.fields },
+					this.currentDeckPath,
+					this.currentTemplate.path,
+					createAnother,
+					statusCallback,
+				),
+			);
+
+			if (createAnother) {
+				for (const variable of this.currentTemplate.variables) {
+					this.fields[variable.name] = "";
+				}
+				this.setSubmitting(false);
+				this.renderContent();
+				return;
+			}
+
+			this.close();
+		} catch (error) {
+			this.setSubmitting(false);
+			console.error("Failed to submit card:", error);
+		}
+	}
+
+	private setSubmitting(isSubmitting: boolean): void {
+		this.isSubmitting = isSubmitting;
+		if (!isSubmitting) {
+			this.setStatusText("");
+		}
+		this.applySubmittingState();
+	}
+
+	/**
+	 * Update the status text shown during submission.
+	 */
+	private setStatusText(status: string): void {
+		if (this.statusTextEl) {
+			this.statusTextEl.textContent = status;
+			this.statusTextEl.toggleClass("is-visible", status.length > 0);
+		}
+	}
+
+	private applySubmittingState(): void {
+		const isEditMode = this.mode === "edit";
+		const buttonText = isEditMode ? "Saving..." : "Creating...";
+
+		if (this.createButton) {
+			this.createButton.setDisabled(this.isSubmitting);
+			this.createButton.setButtonText(
+				this.isSubmitting ? buttonText : isEditMode ? "Save" : "Create",
+			);
+			if (this.createButton.buttonEl) {
+				this.createButton.buttonEl.toggleClass(
+					"flashcard-button-loading",
+					this.isSubmitting,
+				);
+			}
+		}
+
+		if (this.cancelButton) {
+			this.cancelButton.setDisabled(this.isSubmitting);
+		}
+
+		if (this.createAnotherCheckbox) {
+			this.createAnotherCheckbox.disabled = this.isSubmitting;
+		}
+
+		this.contentEl.toggleClass(
+			"flashcard-modal-submitting",
+			this.isSubmitting,
+		);
+
+		this.contentEl
+			.querySelectorAll<
+				HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+			>("input, textarea, select")
+			.forEach((element) => {
+				element.disabled = this.isSubmitting;
+			});
 	}
 
 	private isValidDeckPath(path: string): boolean {

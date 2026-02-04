@@ -4,30 +4,19 @@ import { experimental_generateSpeech as generateSpeech } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { FlashcardsPluginSettings } from "../types";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import type {
+	AiProviderConfig,
+	AiProviderType,
+	FlashcardsPluginSettings,
+} from "../types";
+import { debugLog } from "../types";
 import type { AiCacheService } from "./AiCacheService";
-
-/**
- * Supported AI provider types.
- */
-export type AiProviderType = "openai" | "anthropic" | "google";
-
-/**
- * Configuration for a single AI provider.
- */
-export interface AiProviderConfig {
-	type: AiProviderType;
-	/** Model ID for text generation (e.g., "gpt-4o", "claude-sonnet-4-20250514") */
-	textModel?: string;
-	/** Model ID for image generation (e.g., "dall-e-3") */
-	imageModel?: string;
-	/** Model ID for speech generation (e.g., "tts-1") */
-	speechModel?: string;
-	/** Voice ID for speech generation (e.g., "alloy") */
-	speechVoice?: string;
-	/** Optional custom base URL */
-	baseUrl?: string;
-}
+import {
+	getDefaultImageModel,
+	getDefaultSpeechModel,
+	getDefaultTextModel,
+} from "./aiModelDefaults";
 
 /**
  * Context passed to AI pipe filters during rendering.
@@ -37,6 +26,8 @@ export interface AiPipeContext {
 	skipCache: boolean;
 	/** Card file path for context (used for attachment saving) */
 	cardPath?: string;
+	/** Callback for status updates during AI operations */
+	onStatusUpdate?: (status: string) => void;
 }
 
 /**
@@ -63,7 +54,7 @@ export class AiService {
 	private app: App;
 	private settings: FlashcardsPluginSettings;
 	private cacheService: AiCacheService;
-	private getApiKey: (provider: AiProviderType) => string | null;
+	private getApiKey: (provider: AiProviderType) => Promise<string | null>;
 
 	// Parallel processing queue
 	private queue: QueueItem<unknown>[] = [];
@@ -74,7 +65,7 @@ export class AiService {
 		app: App,
 		settings: FlashcardsPluginSettings,
 		cacheService: AiCacheService,
-		getApiKey: (provider: AiProviderType) => string | null,
+		getApiKey: (provider: AiProviderType) => Promise<string | null>,
 	) {
 		this.app = app;
 		this.settings = settings;
@@ -96,15 +87,30 @@ export class AiService {
 		pipeType: "askAi" | "generateImage" | "generateSpeech",
 	): AiProviderConfig | null {
 		const providerId = this.settings.aiPipeProviders?.[pipeType];
-		if (!providerId) return null;
-		return this.settings.aiProviders?.[providerId] ?? null;
+		if (!providerId) {
+			debugLog("AI pipe %s: no provider assigned", pipeType);
+			return null;
+		}
+		const config = this.settings.aiProviders?.[providerId] ?? null;
+		debugLog(
+			"AI pipe %s: providerId=%s type=%s",
+			pipeType,
+			providerId,
+			config?.type ?? "missing",
+		);
+		return config;
 	}
 
 	/**
 	 * Create a provider instance based on type and API key.
 	 */
-	private createProvider(config: AiProviderConfig) {
-		const apiKey = this.getApiKey(config.type);
+	private async createProvider(config: AiProviderConfig) {
+		const apiKey = await this.getApiKey(config.type);
+		debugLog(
+			"AI provider %s: apiKey present=%s",
+			config.type,
+			!!apiKey,
+		);
 		if (!apiKey) {
 			throw new Error(
 				`No API key configured for provider: ${config.type}`,
@@ -126,6 +132,12 @@ export class AiService {
 				return createGoogleGenerativeAI({
 					apiKey,
 					baseURL: config.baseUrl,
+				});
+			case "openrouter":
+				return createOpenRouter({
+					apiKey,
+					baseURL: config.baseUrl,
+					compatibility: "strict",
 				});
 			default: {
 				const exhaustiveCheck: never = config.type;
@@ -205,9 +217,9 @@ export class AiService {
 
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
-			const provider = this.createProvider(config);
+			const provider = await this.createProvider(config);
 			const modelId =
-				config.textModel ?? this.getDefaultTextModel(config.type);
+				config.textModel ?? getDefaultTextModel(config.type);
 
 			const response = await generateText({
 				model: provider(modelId),
@@ -257,9 +269,9 @@ export class AiService {
 
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
-			const provider = this.createProvider(config);
+			const provider = await this.createProvider(config);
 			const modelId =
-				config.imageModel ?? this.getDefaultImageModel(config.type);
+				config.imageModel ?? getDefaultImageModel(config.type);
 
 			// Only OpenAI supports image generation via AI SDK currently
 			if (config.type !== "openai") {
@@ -325,9 +337,9 @@ export class AiService {
 
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
-			const provider = this.createProvider(config);
+			const provider = await this.createProvider(config);
 			const modelId =
-				config.speechModel ?? this.getDefaultSpeechModel(config.type);
+				config.speechModel ?? getDefaultSpeechModel(config.type);
 			const voice = config.speechVoice ?? "alloy";
 
 			// Only OpenAI supports speech generation via AI SDK currently
@@ -393,46 +405,6 @@ export class AiService {
 		await this.app.vault.createBinary(filePath, data);
 
 		return filename;
-	}
-
-	/**
-	 * Get default text model for a provider.
-	 */
-	private getDefaultTextModel(type: AiProviderType): string {
-		switch (type) {
-			case "openai":
-				return "gpt-4o";
-			case "anthropic":
-				return "claude-sonnet-4-20250514";
-			case "google":
-				return "gemini-1.5-flash";
-			default:
-				return "gpt-4o";
-		}
-	}
-
-	/**
-	 * Get default image model for a provider.
-	 */
-	private getDefaultImageModel(type: AiProviderType): string {
-		switch (type) {
-			case "openai":
-				return "dall-e-3";
-			default:
-				return "dall-e-3";
-		}
-	}
-
-	/**
-	 * Get default speech model for a provider.
-	 */
-	private getDefaultSpeechModel(type: AiProviderType): string {
-		switch (type) {
-			case "openai":
-				return "tts-1";
-			default:
-				return "tts-1";
-		}
 	}
 
 	/**

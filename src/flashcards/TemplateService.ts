@@ -20,6 +20,8 @@ export interface RenderOptions {
 	skipCache?: boolean;
 	/** Card file path for context (used for attachment saving) */
 	cardPath?: string;
+	/** Callback for status updates during AI operations */
+	onStatusUpdate?: (status: string) => void;
 }
 
 /**
@@ -69,6 +71,11 @@ export class TemplateService {
 				prompt: string,
 				callback: (err: Error | null, result?: string) => void,
 			) => {
+				const safePrompt = typeof prompt === "string" ? prompt : "";
+				if (safePrompt.trim().length === 0) {
+					callback(null, "");
+					return;
+				}
 				if (!this.aiService) {
 					callback(
 						new Error(
@@ -82,8 +89,11 @@ export class TemplateService {
 					return;
 				}
 
+				// Notify status update
+				this.currentRenderContext.onStatusUpdate?.("Asking AI...");
+
 				this.aiService
-					.askAi(prompt, this.currentRenderContext)
+					.askAi(safePrompt, this.currentRenderContext)
 					.then((result) => callback(null, result))
 					.catch((err) =>
 						callback(
@@ -101,6 +111,11 @@ export class TemplateService {
 				prompt: string,
 				callback: (err: Error | null, result?: string) => void,
 			) => {
+				const safePrompt = typeof prompt === "string" ? prompt : "";
+				if (safePrompt.trim().length === 0) {
+					callback(null, "");
+					return;
+				}
 				if (!this.aiService) {
 					callback(
 						new Error(
@@ -114,8 +129,11 @@ export class TemplateService {
 					return;
 				}
 
+				// Notify status update
+				this.currentRenderContext.onStatusUpdate?.("Generating image...");
+
 				this.aiService
-					.generateImagePipe(prompt, this.currentRenderContext)
+					.generateImagePipe(safePrompt, this.currentRenderContext)
 					.then((result) => callback(null, result))
 					.catch((err) =>
 						callback(
@@ -133,6 +151,11 @@ export class TemplateService {
 				text: string,
 				callback: (err: Error | null, result?: string) => void,
 			) => {
+				const safeText = typeof text === "string" ? text : "";
+				if (safeText.trim().length === 0) {
+					callback(null, "");
+					return;
+				}
 				if (!this.aiService) {
 					callback(
 						new Error(
@@ -146,8 +169,11 @@ export class TemplateService {
 					return;
 				}
 
+				// Notify status update
+				this.currentRenderContext.onStatusUpdate?.("Generating speech...");
+
 				this.aiService
-					.generateSpeechPipe(text, this.currentRenderContext)
+					.generateSpeechPipe(safeText, this.currentRenderContext)
 					.then((result) => callback(null, result))
 					.catch((err) =>
 						callback(
@@ -249,6 +275,7 @@ export class TemplateService {
 		this.currentRenderContext = {
 			skipCache: options.skipCache ?? false,
 			cardPath: options.cardPath,
+			onStatusUpdate: options.onStatusUpdate,
 		};
 
 		try {

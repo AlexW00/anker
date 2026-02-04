@@ -21,8 +21,11 @@ export const DEBUG = false;
  */
 export function debugLog(message: string, ...args: unknown[]): void {
 	if (DEBUG) {
-		console.debug(`[Anker] ${message}`, ...args);
+		// eslint-disable-next-line no-console
+		console.log(`[Anker] ${message}`, ...args);
 	}
+	// eslint-disable-next-line no-console
+	console.log(`[Anker] ${message}`, ...args);
 }
 
 /**
@@ -178,7 +181,7 @@ export const ALL_DECK_VIEW_COLUMNS: DeckViewColumn[] = [
 /**
  * Supported AI provider types.
  */
-export type AiProviderType = "openai" | "anthropic" | "google";
+export type AiProviderType = "openai" | "anthropic" | "google" | "openrouter";
 
 /**
  * Configuration for a single AI provider.

@@ -45,13 +45,14 @@ export function showCardCreationModal(
 		lastUsedTemplate: state.lastUsedTemplate,
 		initialDeckPath,
 		initialTemplate,
-		onSubmit: (fields, deckPath, templatePath, createAnother) => {
-			void cardService
+		onSubmit: (fields, deckPath, templatePath, createAnother, statusCallback) => {
+			return cardService
 				.createCard(
 					deckPath,
 					templatePath,
 					fields,
 					settings.noteNameTemplate,
+					{ onStatusUpdate: statusCallback },
 				)
 				.then(async (file) => {
 					new Notice("Card created!");
@@ -72,6 +73,7 @@ export function showCardCreationModal(
 				})
 				.catch((error: Error) => {
 					new Notice(`Failed to create card: ${error.message}`);
+					throw error;
 				});
 		},
 	}).open();
@@ -119,9 +121,13 @@ export async function showCardEditModal(
 		onSubmit: () => {
 			// Not used in edit mode
 		},
-		onUpdate: (fields, updatedDeckPath, updatedTemplatePath) => {
-			void cardService
-				.updateCardFields(file, fields, updatedTemplatePath, updatedDeckPath)
+		onUpdate: (fields, updatedDeckPath, updatedTemplatePath, statusCallback) => {
+			return cardService
+				.updateCardFields(file, fields, {
+					templatePath: updatedTemplatePath,
+					deckPath: updatedDeckPath,
+					onStatusUpdate: statusCallback,
+				})
 				.then(async () => {
 					new Notice("Card updated!");
 					if (callbacks?.onRefresh) {
@@ -130,6 +136,7 @@ export async function showCardEditModal(
 				})
 				.catch((error: Error) => {
 					new Notice(`Failed to update card: ${error.message}`);
+					throw error;
 				});
 		},
 	}).open();
