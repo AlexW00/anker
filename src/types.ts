@@ -1,4 +1,13 @@
-import { State } from "ts-fsrs";
+import {
+	State,
+	default_enable_fuzz,
+	default_enable_short_term,
+	default_learning_steps,
+	default_maximum_interval,
+	default_relearning_steps,
+	default_request_retention,
+	default_w,
+} from "ts-fsrs";
 
 /**
  * Enable debug logging throughout the plugin.
@@ -171,6 +180,20 @@ export interface FlashcardsPluginSettings {
 	openCardAfterCreation: boolean;
 	/** Folder path for storing pasted/uploaded media attachments. Relative to vault root. */
 	attachmentFolder: string;
+	/** FSRS request retention target (0-1). */
+	fsrsRequestRetention: number;
+	/** FSRS maximum interval in days. */
+	fsrsMaximumInterval: number;
+	/** FSRS enable fuzzing of intervals. */
+	fsrsEnableFuzz: boolean;
+	/** FSRS enable short-term learning. */
+	fsrsEnableShortTerm: boolean;
+	/** FSRS learning steps (e.g., ["1m", "10m"]). */
+	fsrsLearningSteps: Array<string | number>;
+	/** FSRS relearning steps (e.g., ["10m"]). */
+	fsrsRelearningSteps: Array<string | number>;
+	/** FSRS weights array. */
+	fsrsWeights: number[];
 }
 
 /**
@@ -246,6 +269,13 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	],
 	openCardAfterCreation: true,
 	attachmentFolder: "Anker/Attachments",
+	fsrsRequestRetention: default_request_retention,
+	fsrsMaximumInterval: default_maximum_interval,
+	fsrsEnableFuzz: default_enable_fuzz,
+	fsrsEnableShortTerm: default_enable_short_term,
+	fsrsLearningSteps: [...default_learning_steps],
+	fsrsRelearningSteps: [...default_relearning_steps],
+	fsrsWeights: [...default_w],
 };
 
 export const DEFAULT_STATE: FlashcardsPluginState = {

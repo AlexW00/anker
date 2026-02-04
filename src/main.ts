@@ -48,7 +48,7 @@ export default class AnkerPlugin extends Plugin {
 		);
 		this.cardService = new CardService(this.app, this.templateService);
 		this.deckService = new DeckService(this.app);
-		this.scheduler = new Scheduler();
+		this.scheduler = new Scheduler(this.settings);
 		this.attachmentCleanupService = new AttachmentCleanupService(this.app);
 
 		// Initialize card regeneration service
@@ -156,6 +156,7 @@ export default class AnkerPlugin extends Plugin {
 		});
 		// Update settings in dependent services
 		this.cardRegenService?.updateSettings(this.settings);
+		this.scheduler?.updateSettings(this.settings);
 	}
 
 	async saveState() {

@@ -152,6 +152,7 @@ export class CardCreationModal extends Modal {
 	private availableFolders: string[] = [];
 	private availableTemplates: FlashcardTemplate[] = [];
 	private fields: Record<string, string> = {};
+	private createAnother = false;
 	private activeTextarea: HTMLTextAreaElement | null = null;
 	private textareaSuggests: TextareaSuggest[] = [];
 	private deckSuggest: DeckPathSuggest | null = null;
@@ -400,17 +401,26 @@ export class CardCreationModal extends Modal {
 			cls: "flashcard-buttons-right",
 		});
 
-		new ButtonComponent(rightButtons)
-			.setButtonText("Create & add another")
-			.onClick(() => {
-				this.submitCard(true);
-			});
+		const createAnotherLabel = rightButtons.createEl("label", {
+			cls: "flashcard-create-another-toggle",
+			attr: {
+				title: "Keep this dialog open after creating a card",
+			},
+		});
+		const createAnotherCheckbox = createAnotherLabel.createEl("input", {
+			type: "checkbox",
+		});
+		createAnotherCheckbox.checked = this.createAnother;
+		createAnotherCheckbox.addEventListener("change", () => {
+			this.createAnother = createAnotherCheckbox.checked;
+		});
+		createAnotherLabel.createSpan({ text: "Create another" });
 
 		new ButtonComponent(rightButtons)
 			.setButtonText("Create")
 			.setCta()
 			.onClick(() => {
-				this.submitCard(false);
+				this.submitCard(this.createAnother);
 			});
 
 		// Focus first field

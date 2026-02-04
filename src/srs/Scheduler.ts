@@ -1,5 +1,5 @@
-import { fsrs, FSRS, Rating, Card } from "ts-fsrs";
-import type { ReviewState } from "../types";
+import { fsrs, FSRS, Rating, Card, generatorParameters } from "ts-fsrs";
+import type { FlashcardsPluginSettings, ReviewState } from "../types";
 
 /**
  * FSRS scheduler wrapper for flashcard reviews.
@@ -7,9 +7,34 @@ import type { ReviewState } from "../types";
 export class Scheduler {
 	private fsrs: FSRS;
 
-	constructor() {
-		// Use default FSRS parameters
-		this.fsrs = fsrs();
+	constructor(settings: FlashcardsPluginSettings) {
+		this.fsrs = fsrs(this.buildParameters(settings));
+	}
+
+	updateSettings(settings: FlashcardsPluginSettings) {
+		this.fsrs = fsrs(this.buildParameters(settings));
+	}
+
+	private buildParameters(settings: FlashcardsPluginSettings) {
+		const learningSteps = settings.fsrsLearningSteps?.length
+			? settings.fsrsLearningSteps
+			: undefined;
+		const relearningSteps = settings.fsrsRelearningSteps?.length
+			? settings.fsrsRelearningSteps
+			: undefined;
+		const weights = settings.fsrsWeights?.length
+			? settings.fsrsWeights
+			: undefined;
+
+		return generatorParameters({
+			request_retention: settings.fsrsRequestRetention,
+			maximum_interval: settings.fsrsMaximumInterval,
+			enable_fuzz: settings.fsrsEnableFuzz,
+			enable_short_term: settings.fsrsEnableShortTerm,
+			learning_steps: learningSteps,
+			relearning_steps: relearningSteps,
+			w: weights,
+		});
 	}
 
 	/**

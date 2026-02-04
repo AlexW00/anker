@@ -4,6 +4,7 @@ import {
 	ALL_DECK_VIEW_COLUMNS,
 	DECK_VIEW_COLUMN_LABELS,
 	DEFAULT_BASIC_TEMPLATE,
+	DEFAULT_SETTINGS,
 } from "./types";
 
 export { DEFAULT_SETTINGS } from "./types";
@@ -147,6 +148,149 @@ export class AnkerSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		new Setting(containerEl).setName("Scheduling (FSRS)").setHeading();
+
+		new Setting(containerEl)
+			.setName("Request retention")
+			.setDesc("Target recall probability (0 to 1).")
+			.addText((text) =>
+				text
+					.setPlaceholder(
+						String(DEFAULT_SETTINGS.fsrsRequestRetention),
+					)
+					.setValue(String(this.plugin.settings.fsrsRequestRetention))
+					.onChange(async (value) => {
+						const num = parseFloat(value);
+						if (!isNaN(num) && num > 0 && num <= 1) {
+							this.plugin.settings.fsrsRequestRetention = num;
+							await this.plugin.saveSettings();
+						}
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Maximum interval (days)")
+			.setDesc("Maximum scheduled interval in days.")
+			.addText((text) =>
+				text
+					.setPlaceholder(
+						String(DEFAULT_SETTINGS.fsrsMaximumInterval),
+					)
+					.setValue(String(this.plugin.settings.fsrsMaximumInterval))
+					.onChange(async (value) => {
+						const num = parseFloat(value);
+						if (!isNaN(num) && num > 0) {
+							this.plugin.settings.fsrsMaximumInterval = num;
+							await this.plugin.saveSettings();
+						}
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Enable fuzz")
+			.setDesc("Add randomness to long intervals to reduce clumping.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.fsrsEnableFuzz)
+					.onChange(async (value) => {
+						this.plugin.settings.fsrsEnableFuzz = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Enable short-term learning")
+			.setDesc("Use short-term learning steps before long-term review.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.fsrsEnableShortTerm)
+					.onChange(async (value) => {
+						this.plugin.settings.fsrsEnableShortTerm = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Learning steps")
+			.setDesc("Comma-separated list, e.g., 1m, 10m.")
+			.addText((text) =>
+				text
+					.setPlaceholder("1m, 10m")
+					.setValue(
+						this.formatSteps(
+							this.plugin.settings.fsrsLearningSteps,
+						),
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.fsrsLearningSteps =
+							this.parseSteps(value);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Relearning steps")
+			.setDesc("Comma-separated list, e.g., 10m.")
+			.addText((text) =>
+				text
+					.setPlaceholder("10m")
+					.setValue(
+						this.formatSteps(
+							this.plugin.settings.fsrsRelearningSteps,
+						),
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.fsrsRelearningSteps =
+							this.parseSteps(value);
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Weights (w)")
+			.setDesc(
+				"Comma-separated list of numbers. Leave blank to use defaults.",
+			)
+			.addTextArea((text) => {
+				text.setPlaceholder("0.1, 1.2, ...")
+					.setValue(this.plugin.settings.fsrsWeights.join(", "))
+					.onChange(async (value) => {
+						const weights = this.parseWeights(value);
+						if (weights) {
+							this.plugin.settings.fsrsWeights = weights;
+							await this.plugin.saveSettings();
+						}
+					});
+				text.inputEl.rows = 3;
+			});
+
+		new Setting(containerEl)
+			.setName("Reset FSRS parameters")
+			.setDesc("Restore default scheduling parameters.")
+			.addButton((button) =>
+				button.setButtonText("Reset").onClick(async () => {
+					this.plugin.settings.fsrsRequestRetention =
+						DEFAULT_SETTINGS.fsrsRequestRetention;
+					this.plugin.settings.fsrsMaximumInterval =
+						DEFAULT_SETTINGS.fsrsMaximumInterval;
+					this.plugin.settings.fsrsEnableFuzz =
+						DEFAULT_SETTINGS.fsrsEnableFuzz;
+					this.plugin.settings.fsrsEnableShortTerm =
+						DEFAULT_SETTINGS.fsrsEnableShortTerm;
+					this.plugin.settings.fsrsLearningSteps = [
+						...DEFAULT_SETTINGS.fsrsLearningSteps,
+					];
+					this.plugin.settings.fsrsRelearningSteps = [
+						...DEFAULT_SETTINGS.fsrsRelearningSteps,
+					];
+					this.plugin.settings.fsrsWeights = [
+						...DEFAULT_SETTINGS.fsrsWeights,
+					];
+					await this.plugin.saveSettings();
+					this.display();
+				}),
+			);
+
 		new Setting(containerEl).setName("Deck view").setHeading();
 
 		new Setting(containerEl)
@@ -189,5 +333,40 @@ export class AnkerSettingTab extends PluginSettingTab {
 					}),
 				);
 		}
+	}
+
+	private formatSteps(steps: Array<string | number>): string {
+		return steps.map((step) => String(step)).join(", ");
+	}
+
+	private parseSteps(value: string): Array<string | number> {
+		const parts = value
+			.split(",")
+			.map((part) => part.trim())
+			.filter((part) => part.length > 0);
+
+		return parts.map((part) => {
+			const num = Number(part);
+			const isNumeric =
+				!isNaN(num) && /^-?\d+(?:\.\d+)?$/.test(part);
+			return isNumeric ? num : part;
+		});
+	}
+
+	private parseWeights(value: string): number[] | null {
+		const parts = value
+			.split(",")
+			.map((part) => part.trim())
+			.filter((part) => part.length > 0);
+
+		if (parts.length === 0) {
+			return [];
+		}
+
+		const weights = parts.map((part) => Number(part));
+		if (weights.some((num) => isNaN(num))) {
+			return null;
+		}
+		return weights;
 	}
 }
