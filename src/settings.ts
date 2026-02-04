@@ -50,6 +50,19 @@ export class AnkerSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		new Setting(containerEl)
+			.setName("Default import folder")
+			.setDesc("Default destination folder when importing Anki backups")
+			.addText((text) =>
+				text
+					.setPlaceholder("Example: anker/imported")
+					.setValue(this.plugin.settings.defaultImportFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.defaultImportFolder = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
+
 		new Setting(containerEl).setName("Card creation").setHeading();
 
 		new Setting(containerEl)

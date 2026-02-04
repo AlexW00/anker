@@ -1,4 +1,4 @@
-import { fsrs, FSRS, Rating, Card, generatorParameters } from "ts-fsrs";
+import { fsrs, FSRS, Rating, Card, generatorParameters, type Steps } from "ts-fsrs";
 import type { FlashcardsPluginSettings, ReviewState } from "../types";
 
 /**
@@ -16,11 +16,11 @@ export class Scheduler {
 	}
 
 	private buildParameters(settings: FlashcardsPluginSettings) {
-		const learningSteps = settings.fsrsLearningSteps?.length
-			? settings.fsrsLearningSteps
+		const learningSteps: Steps | undefined = settings.fsrsLearningSteps?.length
+			? (settings.fsrsLearningSteps as Steps)
 			: undefined;
-		const relearningSteps = settings.fsrsRelearningSteps?.length
-			? settings.fsrsRelearningSteps
+		const relearningSteps: Steps | undefined = settings.fsrsRelearningSteps?.length
+			? (settings.fsrsRelearningSteps as Steps)
 			: undefined;
 		const weights = settings.fsrsWeights?.length
 			? settings.fsrsWeights

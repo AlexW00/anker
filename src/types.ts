@@ -195,6 +195,8 @@ export interface FlashcardsPluginSettings {
 	openCardAfterCreation: boolean;
 	/** Folder path for storing pasted/uploaded media attachments. Relative to vault root. */
 	attachmentFolder: string;
+	/** Default folder for importing Anki decks. Relative to vault root. */
+	defaultImportFolder: string;
 	/** FSRS request retention target (0-1). */
 	fsrsRequestRetention: number;
 	/** FSRS maximum interval in days. */
@@ -284,6 +286,7 @@ export const DEFAULT_SETTINGS: FlashcardsPluginSettings = {
 	],
 	openCardAfterCreation: true,
 	attachmentFolder: "Anker/Attachments",
+	defaultImportFolder: "Anker/Imported",
 	fsrsRequestRetention: default_request_retention,
 	fsrsMaximumInterval: default_maximum_interval,
 	fsrsEnableFuzz: default_enable_fuzz,
@@ -306,3 +309,124 @@ export interface PluginWithSettings {
 	settings: FlashcardsPluginSettings;
 	saveSettings(): Promise<void>;
 }
+
+// ============================================================================
+// Anki Import Types
+// ============================================================================
+
+/**
+ * Anki model field definition.
+ */
+export interface AnkiField {
+	name: string;
+	ord: number;
+	sticky: boolean;
+	rtl: boolean;
+	font: string;
+	size: number;
+}
+
+/**
+ * Anki card template definition.
+ */
+export interface AnkiCardTemplate {
+	name: string;
+	qfmt: string; // Question (front) format HTML
+	afmt: string; // Answer (back) format HTML
+	ord: number;
+	did: number | null;
+	bqfmt: string; // Browser question format
+	bafmt: string; // Browser answer format
+}
+
+/**
+ * Anki model (note type) definition from col.models JSON.
+ */
+export interface AnkiModel {
+	id: string;
+	name: string;
+	type: number; // 0 = standard, 1 = cloze
+	flds: AnkiField[];
+	tmpls: AnkiCardTemplate[];
+	css: string;
+	latexPre: string;
+	latexPost: string;
+	mod: number;
+	did: number;
+	sortf: number;
+	tags: string[];
+}
+
+/**
+ * Anki deck definition from col.decks JSON.
+ */
+export interface AnkiDeck {
+	id: number;
+	name: string; // May contain "::" for nested decks
+	desc: string;
+	mod: number;
+	dyn: number; // 1 if filtered/dynamic deck
+	collapsed: boolean;
+}
+
+/**
+ * Anki note from notes table.
+ */
+export interface AnkiNote {
+	id: number;
+	guid: string;
+	mid: number; // Model ID
+	mod: number;
+	tags: string;
+	flds: string; // Fields separated by \x1f
+	sfld: string; // Sort field
+}
+
+/**
+ * Anki card from cards table.
+ */
+export interface AnkiCard {
+	id: number;
+	nid: number; // Note ID
+	did: number; // Deck ID
+	ord: number; // Template ordinal
+	mod: number;
+	type: number; // 0=new, 1=learning, 2=review, 3=relearning
+	queue: number;
+	due: number;
+	ivl: number;
+	factor: number;
+	reps: number;
+	lapses: number;
+}
+
+/**
+ * Parsed Anki package data.
+ */
+export interface AnkiPackageData {
+	models: Map<string, AnkiModel>;
+	decks: Map<number, AnkiDeck>;
+	notes: AnkiNote[];
+	cards: AnkiCard[];
+	media: Map<string, string>; // numeric filename -> original filename
+}
+
+/**
+ * Deck selection for import UI.
+ */
+export interface AnkiDeckSelection {
+	deck: AnkiDeck;
+	selected: boolean;
+	noteCount: number;
+	children: AnkiDeckSelection[];
+	depth: number;
+}
+
+/**
+ * Progress callback for import operations.
+ */
+export type ImportProgressCallback = (
+	current: number,
+	total: number,
+	message: string,
+) => void;

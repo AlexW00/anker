@@ -644,3 +644,96 @@
     display: flex;
     align-items: center;
 }
+
+/* Anki Import Modal */
+.anki-import-modal {
+	min-width: 450px;
+}
+
+.anki-import-file-input-hidden {
+	display: none;
+}
+
+.anki-import-file-section {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+}
+
+.anki-import-filename {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.anki-import-deck-list {
+	margin: var(--size-4-4) 0;
+	max-height: 300px;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+}
+
+.anki-import-controls {
+	display: flex;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+	padding-bottom: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.anki-import-decks {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+}
+
+.anki-import-deck-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-1) var(--size-4-2);
+	border-radius: var(--radius-s);
+}
+
+.anki-import-deck-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.anki-import-checkbox {
+	margin: 0;
+}
+
+.anki-import-deck-name {
+	flex: 1;
+}
+
+.anki-import-deck-count {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.anki-import-folder-section {
+	margin: var(--size-4-4) 0;
+}
+
+.anki-import-progress {
+	margin: var(--size-4-4) 0;
+}
+
+.anki-import-loading,
+.anki-import-empty,
+.anki-import-error {
+	color: var(--text-muted);
+	text-align: center;
+	padding: var(--size-4-4);
+}
+
+.anki-import-error {
+	color: var(--text-error);
+}
+
+.anki-import-progress-hidden {
+	display: none;
+}

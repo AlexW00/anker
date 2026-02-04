@@ -19,6 +19,7 @@ import { TemplateSelectorModal } from "./ui/TemplateSelectorModal";
 import { TemplateNameModal } from "./ui/TemplateNameModal";
 import { showCardCreationModal } from "./ui/CardCreationFlow";
 import { OrphanAttachmentsModal } from "./ui/OrphanAttachmentsModal";
+import { AnkiImportModal } from "./ui/AnkiImportModal";
 
 export default class AnkerPlugin extends Plugin {
 	settings: FlashcardsPluginSettings;
@@ -220,6 +221,12 @@ export default class AnkerPlugin extends Plugin {
 			name: "Delete unused attachments",
 			callback: () => this.deleteUnusedAttachments(),
 		});
+
+		this.addCommand({
+			id: "import-anki-backup",
+			name: "Import Anki backup",
+			callback: () => this.importAnkiBackup(),
+		});
 	}
 
 	/**
@@ -385,6 +392,18 @@ export default class AnkerPlugin extends Plugin {
 					await this.app.fileManager.trashFile(file);
 				}
 			},
+		).open();
+	}
+
+	/**
+	 * Open the Anki import modal.
+	 */
+	private importAnkiBackup() {
+		new AnkiImportModal(
+			this.app,
+			this.templateService,
+			this.deckService,
+			this.settings,
 		).open();
 	}
 }
