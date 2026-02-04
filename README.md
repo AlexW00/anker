@@ -89,14 +89,14 @@ Note: Cards due later today are treated as due immediately (Anki-style). If a ca
 
 ## Settings
 
-| Setting                      | Description                                                              | Default                |
-| ---------------------------- | ------------------------------------------------------------------------ | ---------------------- |
+| Setting                      | Description                                                              | Default           |
+| ---------------------------- | ------------------------------------------------------------------------ | ----------------- |
 | **Template folder**          | Folder containing template files                                         | `Anker/Templates` |
-| **Note name template**       | Filename pattern for new cards (`{{date}}`, `{{time}}`, `{{timestamp}}`) | `{{timestamp}}`        |
-| **Auto-regenerate debounce** | Seconds to wait before auto-regenerating after edits                     | `1`                    |
-| **Show only current side**   | Show only the current card side during review (vs. cumulative)           | `false`                |
-| **Open card after creation** | Open new cards in edit view after creation                               | `true`                 |
-| **Deck view columns**        | Columns displayed in deck base views                                     | Various                |
+| **Note name template**       | Filename pattern for new cards (`{{date}}`, `{{time}}`, `{{timestamp}}`) | `{{timestamp}}`   |
+| **Auto-regenerate debounce** | Seconds to wait before auto-regenerating after edits                     | `1`               |
+| **Show only current side**   | Show only the current card side during review (vs. cumulative)           | `false`           |
+| **Open card after creation** | Open new cards in edit view after creation                               | `true`            |
+| **Deck view columns**        | Columns displayed in deck base views                                     | Various           |
 
 ## Card Structure
 
