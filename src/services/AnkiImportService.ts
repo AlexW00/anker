@@ -751,12 +751,18 @@ export class AnkiImportService {
 
 				// Ensure folder exists
 				await this.ensureFolderExists(this.settings.attachmentFolder);
-				const existing = this.app.vault.getAbstractFileByPath(mediaPath);
+				const existing =
+					this.app.vault.getAbstractFileByPath(mediaPath);
 				if (existing) {
 					if (existing instanceof TFile) {
-						await this.app.vault.modifyBinary(existing, mediaBuffer);
+						await this.app.vault.modifyBinary(
+							existing,
+							mediaBuffer,
+						);
 					} else {
-						throw new Error(`Cannot overwrite non-file path: ${mediaPath}`);
+						throw new Error(
+							`Cannot overwrite non-file path: ${mediaPath}`,
+						);
 					}
 				} else {
 					await this.app.vault.createBinary(mediaPath, mediaBuffer);

@@ -110,9 +110,10 @@ export class AnkiContentConverter {
 				}
 
 				const listIndentSize =
-					typeof (options as { listIndentSize?: number }).listIndentSize ===
-						"number"
-						? (options as { listIndentSize?: number }).listIndentSize ?? 3
+					typeof (options as { listIndentSize?: number })
+						.listIndentSize === "number"
+						? ((options as { listIndentSize?: number })
+								.listIndentSize ?? 3)
 						: 3;
 				const space = " ".repeat(
 					1 + Math.max(0, listIndentSize - marker.length),
