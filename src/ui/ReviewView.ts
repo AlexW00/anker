@@ -263,7 +263,7 @@ export class ReviewView extends ItemView {
 	private renderRatingButtons(container: HTMLElement, card: Flashcard) {
 		if (!this.session) return;
 
-		const reviewState = card.frontmatter.review;
+		const reviewState = card.frontmatter._review;
 		const nextStates = this.plugin.scheduler.getNextStates(reviewState);
 
 		const buttonsContainer = container.createDiv({
@@ -340,7 +340,7 @@ export class ReviewView extends ItemView {
 
 		if (file instanceof TFile) {
 			const newState = this.plugin.scheduler.review(
-				card.frontmatter.review,
+				card.frontmatter._review,
 				rating,
 			);
 			await this.plugin.cardService.updateReviewState(file, newState);

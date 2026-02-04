@@ -65,11 +65,12 @@ export class CardService {
 		const body = this.templateService.render(template.body, fields);
 
 		// Create system frontmatter (these always take precedence)
+		// User fields are spread at the top level, plugin properties are prefixed with _
 		const systemFrontmatter: FlashcardFrontmatter = {
-			type: "flashcard",
-			template: `[[${template.path}]]`,
-			fields,
-			review: this.createInitialReviewState(),
+			_type: "flashcard",
+			_template: `[[${template.path}]]`,
+			_review: this.createInitialReviewState(),
+			...fields,
 		};
 
 		// Merge template frontmatter with system frontmatter
@@ -119,14 +120,14 @@ export class CardService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
 
-		if (fm?.type !== "flashcard") {
+		if (fm?._type !== "flashcard") {
 			throw new Error("Not a flashcard");
 		}
 
 		// Load template
-		const template = await this.templateService.loadTemplate(fm.template);
+		const template = await this.templateService.loadTemplate(fm._template);
 		if (!template) {
-			throw new Error(`Template not found: ${fm.template}`);
+			throw new Error(`Template not found: ${fm._template}`);
 		}
 		debugLog("regenerate-card: template loaded", {
 			path: template.path,
@@ -136,16 +137,19 @@ export class CardService {
 			bodyLength: template.body.length,
 		});
 
+		// Extract user fields (all non-underscore prefixed properties)
+		const userFields = this.extractUserFields(fm);
+
 		// Build system frontmatter from current card (always takes precedence)
 		const systemFrontmatter: FlashcardFrontmatter = {
-			type: "flashcard",
-			template: fm.template,
-			fields: fm.fields,
-			review: fm.review,
+			_type: "flashcard",
+			_template: fm._template,
+			_review: fm._review,
+			...userFields,
 		};
 
 		// Render new body (use template.body which excludes template frontmatter)
-		const body = this.templateService.render(template.body, fm.fields);
+		const body = this.templateService.render(template.body, userFields);
 
 		// Merge existing frontmatter + template frontmatter + system overrides
 		const mergedFrontmatter = this.mergeTemplateFrontmatter(
@@ -174,14 +178,14 @@ export class CardService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
 
-		if (fm?.type !== "flashcard") {
+		if (fm?._type !== "flashcard") {
 			throw new Error("Not a flashcard");
 		}
 
 		// Update frontmatter with new review state
 		const updatedFm: FlashcardFrontmatter = {
 			...fm,
-			review: reviewState,
+			_review: reviewState,
 		};
 
 		// Extract body (everything after frontmatter)
@@ -267,7 +271,7 @@ export class CardService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 
-		if (fm?.type !== "flashcard") {
+		if (fm?._type !== "flashcard") {
 			return null;
 		}
 
@@ -275,5 +279,22 @@ export class CardService {
 			path: file.path,
 			frontmatter: fm as FlashcardFrontmatter,
 		};
+	}
+
+	/**
+	 * Extract user fields from frontmatter (all non-underscore prefixed properties).
+	 */
+	extractUserFields(fm: FlashcardFrontmatter): Record<string, string> {
+		const userFields: Record<string, string> = {};
+		for (const key of Object.keys(fm)) {
+			// Skip plugin properties (underscore prefixed)
+			if (key.startsWith("_")) continue;
+			// Only include string values
+			const value = fm[key];
+			if (typeof value === "string") {
+				userFields[key] = value;
+			}
+		}
+		return userFields;
 	}
 }

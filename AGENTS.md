@@ -30,15 +30,16 @@
 **Flashcard Frontmatter Structure:**
 
 ```yaml
-type: flashcard
-template: "[[Templates/Flashcards/Basic]]"
-fields:
-    front: "Question"
-    back: "Answer"
-review:
+_type: flashcard
+_template: "[[Templates/Flashcards/Basic]]"
+_review:
     due: "2024-01-15T10:00:00.000Z"
     state: 0 # 0=New, 1=Learning, 2=Review, 3=Relearning
+front: "Question"
+back: "Answer"
 ```
+
+Note: Plugin properties are prefixed with underscore (`_type`, `_template`, `_review`) to avoid conflicts with user-defined field names. User fields are stored at the top level of frontmatter.
 
 **Templates**: Use Nunjucks syntax (`{{ variable }}`). Variables extracted via regex (ignoring HTML comments).
 

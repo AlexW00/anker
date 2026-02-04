@@ -32,7 +32,7 @@ export class DeckService {
 	 * New cards (no review state) are treated as earliest due.
 	 */
 	private getCardDueDate(card: Flashcard): Date {
-		const review = card.frontmatter.review;
+		const review = card.frontmatter._review;
 		if (!review) return new Date(0);
 		return new Date(review.due);
 	}
@@ -42,7 +42,7 @@ export class DeckService {
 	 */
 	isFlashcard(file: TFile): boolean {
 		const cache = this.app.metadataCache.getFileCache(file);
-		return cache?.frontmatter?.type === "flashcard";
+		return cache?.frontmatter?._type === "flashcard";
 	}
 
 	/**
@@ -52,7 +52,7 @@ export class DeckService {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter;
 
-		if (fm?.type !== "flashcard") {
+		if (fm?._type !== "flashcard") {
 			return null;
 		}
 
@@ -117,7 +117,7 @@ export class DeckService {
 		let reviewCount = 0;
 
 		for (const card of flashcards) {
-			const review = card.frontmatter.review;
+			const review = card.frontmatter._review;
 			if (!review) {
 				newCount++;
 				continue;
@@ -201,7 +201,7 @@ export class DeckService {
 		const flashcards = this.getFlashcardsInFolder(deckPath);
 
 		const dueCards = flashcards.filter((card) => {
-			const review = card.frontmatter.review;
+			const review = card.frontmatter._review;
 			if (!review) return true; // New cards are always due
 
 			const dueDate = new Date(review.due);
@@ -252,7 +252,7 @@ export class DeckService {
 
 		return allCards.filter((card) => {
 			const cardTemplatePath = this.normalizeTemplatePath(
-				card.frontmatter.template,
+				card.frontmatter._template,
 			);
 			return cardTemplatePath === normalizedTemplatePath;
 		});

@@ -85,25 +85,25 @@ export class DeckBaseViewService {
 		const columns = settings.deckViewColumns;
 
 		const formulaDefs: Record<string, string> = {
-			state: 'if(review.state == 0, "New", if(review.state == 1, "Learn", if(review.state == 2, "Review", "Relearn")))',
-			due: "review.due",
-			stability: "review.stability",
-			difficulty: "review.difficulty",
-			reps: "review.reps",
-			lapses: "review.lapses",
-			last_review: "review.last_review",
-			scheduled_days: "review.scheduled_days",
-			elapsed_days: "review.elapsed_days",
+			state: 'if(_review.state == 0, "New", if(_review.state == 1, "Learn", if(_review.state == 2, "Review", "Relearn")))',
+			due: "_review.due",
+			stability: "_review.stability",
+			difficulty: "_review.difficulty",
+			reps: "_review.reps",
+			lapses: "_review.lapses",
+			last_review: "_review.last_review",
+			scheduled_days: "_review.scheduled_days",
+			elapsed_days: "_review.elapsed_days",
 		};
 
 		const formulas: Record<string, string> = {};
 		for (const col of columns) {
-			// Built-in columns don't need formulas
+			// Built-in columns don't need formulas (file.* columns are Obsidian built-ins)
+			// Note: "template" column maps to "_template" frontmatter property
 			const isBuiltIn =
 				col === "file.name" ||
 				col === "file.ctime" ||
-				col === "file.mtime" ||
-				col === "template";
+				col === "file.mtime";
 			if (!isBuiltIn && formulaDefs[col]) {
 				formulas[col] = formulaDefs[col];
 			}
@@ -111,13 +111,13 @@ export class DeckBaseViewService {
 
 		const properties: Record<string, { displayName: string }> = {};
 		for (const col of columns) {
-			// Built-in columns use their property name directly
+			// Built-in file.* columns use their property name directly
+			// "template" maps to "_template" frontmatter property
 			const isBuiltIn =
 				col === "file.name" ||
 				col === "file.ctime" ||
-				col === "file.mtime" ||
-				col === "template";
-			const key = isBuiltIn ? col : `formula.${col}`;
+				col === "file.mtime";
+			const key = isBuiltIn ? col : (col === "template" ? "_template" : `formula.${col}`);
 
 			properties[key] = {
 				displayName: DECK_VIEW_COLUMN_LABELS[col],
@@ -125,39 +125,39 @@ export class DeckBaseViewService {
 		}
 
 		const order: string[] = columns.map((col: DeckViewColumn) => {
-			// Built-in columns use their property name directly
+			// Built-in file.* columns use their property name directly
+			// "template" maps to "_template" frontmatter property
 			const isBuiltIn =
 				col === "file.name" ||
 				col === "file.ctime" ||
-				col === "file.mtime" ||
-				col === "template";
-			return isBuiltIn ? col : `formula.${col}`;
+				col === "file.mtime";
+			return isBuiltIn ? col : (col === "template" ? "_template" : `formula.${col}`);
 		});
 
 		// Build filters based on state filter
 		const baseFilters: string[] = [
 			`file.inFolder("${deckPath}")`,
-			'type == "flashcard"',
+			'_type == "flashcard"',
 		];
 
 		const viewName = this.getViewName(stateFilter);
 
 		switch (stateFilter) {
 			case "new":
-				baseFilters.push("review.state == 0");
+				baseFilters.push("_review.state == 0");
 				break;
 			case "learn":
 				// Learn (1)
-				baseFilters.push("review.state == 1");
+				baseFilters.push("_review.state == 1");
 				break;
 			case "relearn":
 				// Relearn (3)
-				baseFilters.push("review.state == 3");
+				baseFilters.push("_review.state == 3");
 				break;
 			case "review":
 				// Review state (2) and due date <= now
-				baseFilters.push("review.state == 2");
-				baseFilters.push("review.due <= now()");
+				baseFilters.push("_review.state == 2");
+				baseFilters.push("_review.due <= now()");
 				break;
 			// "all" - no additional filters
 		}

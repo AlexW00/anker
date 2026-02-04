@@ -29,7 +29,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 			.setDesc("Folder for flashcard templates")
 			.addText((text) =>
 				text
-					.setPlaceholder("Anker/Templates")
+					.setPlaceholder("Example: anker/templates")
 					.setValue(this.plugin.settings.templateFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.templateFolder = value.trim();
@@ -42,7 +42,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 			.setDesc("Folder for pasted images and media")
 			.addText((text) =>
 				text
-					.setPlaceholder("Anker/Attachments")
+					.setPlaceholder("Example: anker/attachments")
 					.setValue(this.plugin.settings.attachmentFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.attachmentFolder = value.trim();
@@ -148,7 +148,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl).setName("Scheduling (FSRS)").setHeading();
+		new Setting(containerEl).setName("Scheduling (fsrs)").setHeading();
 
 		new Setting(containerEl)
 			.setName("Request retention")
@@ -265,7 +265,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Reset FSRS parameters")
+			.setName("Reset fsrs parameters")
 			.setDesc("Restore default scheduling parameters.")
 			.addButton((button) =>
 				button.setButtonText("Reset").onClick(async () => {
@@ -347,8 +347,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 
 		return parts.map((part) => {
 			const num = Number(part);
-			const isNumeric =
-				!isNaN(num) && /^-?\d+(?:\.\d+)?$/.test(part);
+			const isNumeric = !isNaN(num) && /^-?\d+(?:\.\d+)?$/.test(part);
 			return isNumeric ? num : part;
 		});
 	}

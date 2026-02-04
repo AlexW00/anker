@@ -51,12 +51,27 @@ export interface ReviewState {
 /**
  * Flashcard frontmatter structure.
  * This is the source of truth for all card data.
+ * 
+ * Plugin properties are prefixed with underscore to avoid conflicts with user fields.
+ * User fields are stored at the top level (flattened from the template variables).
+ * 
+ * Example:
+ * ```yaml
+ * _type: flashcard
+ * _template: "[[Templates/Basic]]"
+ * _review:
+ *   due: "2024-01-15T10:00:00.000Z"
+ *   state: 0
+ * front: "Question"
+ * back: "Answer"
+ * ```
  */
 export interface FlashcardFrontmatter {
-	type: "flashcard";
-	template: string; // WikiLink to template file, e.g. "[[Templates/Vocab Card]]"
-	fields: Record<string, string>; // Raw data variables
-	review: ReviewState;
+	_type: "flashcard";
+	_template: string; // WikiLink to template file, e.g. "[[Templates/Vocab Card]]"
+	_review: ReviewState;
+	// User fields are stored at the top level (indexed by string)
+	[key: string]: unknown;
 }
 
 /**

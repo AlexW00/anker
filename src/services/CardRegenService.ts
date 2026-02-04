@@ -114,9 +114,9 @@ export class CardRegenService {
 			return;
 		}
 
-		// Create a hash of frontmatter (excluding review) to detect changes
-		const { review, ...rest } = fm as unknown as Record<string, unknown>;
-		void review;
+		// Create a hash of frontmatter (excluding _review) to detect changes
+		const { _review, ...rest } = fm as unknown as Record<string, unknown>;
+		void _review;
 		const frontmatterHash = JSON.stringify(rest);
 		const cachedHash = this.frontmatterCache.get(file.path);
 

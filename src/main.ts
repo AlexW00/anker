@@ -172,25 +172,25 @@ export default class AnkerPlugin extends Plugin {
 	private registerCommands() {
 		this.addCommand({
 			id: "open-dashboard",
-			name: "Anker: Open dashboard",
+			name: "Open dashboard",
 			callback: () => this.openDashboard(),
 		});
 
 		this.addCommand({
 			id: "create-card",
-			name: "Anker: Create new card",
+			name: "Create new card",
 			callback: () => this.createCard(),
 		});
 
 		this.addCommand({
 			id: "start-review",
-			name: "Anker: Start review",
+			name: "Start review",
 			callback: () => this.selectDeckForReview(),
 		});
 
 		this.addCommand({
 			id: "regenerate-card",
-			name: "Anker: Regenerate current card",
+			name: "Regenerate current card",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
 				if (file && this.deckService.isFlashcard(file)) {
@@ -205,19 +205,19 @@ export default class AnkerPlugin extends Plugin {
 
 		this.addCommand({
 			id: "create-template",
-			name: "Anker: Create new template",
+			name: "Create new template",
 			callback: () => this.createTemplate(),
 		});
 
 		this.addCommand({
 			id: "regenerate-all-from-template",
-			name: "Anker: Regenerate all cards from template",
+			name: "Regenerate all cards from template",
 			callback: () => this.selectTemplateForRegeneration(),
 		});
 
 		this.addCommand({
 			id: "delete-unused-attachments",
-			name: "Anker: Delete unused attachments",
+			name: "Delete unused attachments",
 			callback: () => this.deleteUnusedAttachments(),
 		});
 	}
