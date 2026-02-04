@@ -105,7 +105,7 @@ export class ReviewView extends ItemView {
 		if (!this.session) return;
 		await this.loadCurrentCard();
 		// Force full re-render for this card
-		this.lastCardPath = ""; 
+		this.lastCardPath = "";
 		this.render();
 	}
 
@@ -332,10 +332,10 @@ export class ReviewView extends ItemView {
 				i++
 			) {
 				const sideContent = this.currentContent[i] || "";
-				
+
 				// Append separator before new content
 				cardEl.createEl("hr", { cls: "flashcard-side-separator" });
-				
+
 				const renderTarget = cardEl.createDiv({
 					cls: "flashcard-card-content",
 				});
@@ -573,4 +573,3 @@ export class ReviewView extends ItemView {
 		this.session = null;
 	}
 }
-
