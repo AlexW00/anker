@@ -68,7 +68,10 @@ export class AnkiContentConverter {
 		// Handle Anki's [sound:filename.mp3] syntax
 		this.turndown.addRule("ankiSound", {
 			filter: (node: HTMLElement): boolean => {
-				return node.nodeType === 3 && /\[sound:[^\]]+\]/.test(node.textContent ?? "");
+				return (
+					node.nodeType === 3 &&
+					/\[sound:[^\]]+\]/.test(node.textContent ?? "")
+				);
 			},
 			replacement: (content: string): string => {
 				return content.replace(
@@ -107,7 +110,10 @@ export class AnkiContentConverter {
 	/**
 	 * Convert a single field value from Anki HTML to Markdown.
 	 */
-	convertField(fieldHtml: string, mediaMap: Map<string, string>): ConvertedContent {
+	convertField(
+		fieldHtml: string,
+		mediaMap: Map<string, string>,
+	): ConvertedContent {
 		return this.convert(fieldHtml, mediaMap);
 	}
 
@@ -122,12 +128,13 @@ export class AnkiContentConverter {
 	): string {
 		// Match img, video, audio tags and their src attributes
 		// Anki stores media with original filenames in src
-		const mediaRegex = /<(img|video|audio)[^>]*\s+src=["']([^"']+)["'][^>]*>/gi;
+		const mediaRegex =
+			/<(img|video|audio)[^>]*\s+src=["']([^"']+)["'][^>]*>/gi;
 
 		return html.replace(mediaRegex, (match, tag: string, src: string) => {
 			// Decode URL-encoded filenames
 			const decodedSrc = decodeURIComponent(src);
-			
+
 			// Track the media file
 			mediaFiles.add(decodedSrc);
 
@@ -145,7 +152,10 @@ export class AnkiContentConverter {
 	/**
 	 * Process Anki [sound:filename] references.
 	 */
-	private processSoundReferences(html: string, mediaFiles: Set<string>): string {
+	private processSoundReferences(
+		html: string,
+		mediaFiles: Set<string>,
+	): string {
 		return html.replace(/\[sound:([^\]]+)\]/g, (_, filename: string) => {
 			mediaFiles.add(filename);
 			return `![[${filename}]]`;
@@ -171,10 +181,12 @@ export class AnkiContentConverter {
 	 * Clean up excessive whitespace from converted Markdown.
 	 */
 	private cleanupWhitespace(markdown: string): string {
-		return markdown
-			// Replace multiple blank lines with double newline
-			.replace(/\n{3,}/g, "\n\n")
-			// Trim leading/trailing whitespace
-			.trim();
+		return (
+			markdown
+				// Replace multiple blank lines with double newline
+				.replace(/\n{3,}/g, "\n\n")
+				// Trim leading/trailing whitespace
+				.trim()
+		);
 	}
 }

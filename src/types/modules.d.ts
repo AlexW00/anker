@@ -26,7 +26,10 @@ declare module "sql.js" {
 		export(): Uint8Array;
 		close(): void;
 		getRowsModified(): number;
-		create_function(name: string, func: (...args: unknown[]) => unknown): void;
+		create_function(
+			name: string,
+			func: (...args: unknown[]) => unknown,
+		): void;
 	}
 
 	export interface Statement {

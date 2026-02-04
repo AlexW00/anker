@@ -7,8 +7,15 @@ import {
 	Setting,
 	prepareFuzzySearch,
 } from "obsidian";
-import type { AnkiDeckSelection, AnkiPackageData, FlashcardsPluginSettings } from "../types";
-import { AnkiImportService, type ImportResult } from "../services/AnkiImportService";
+import type {
+	AnkiDeckSelection,
+	AnkiPackageData,
+	FlashcardsPluginSettings,
+} from "../types";
+import {
+	AnkiImportService,
+	type ImportResult,
+} from "../services/AnkiImportService";
 import type { TemplateService } from "../flashcards/TemplateService";
 import type { DeckService } from "../flashcards/DeckService";
 
@@ -112,7 +119,11 @@ export class AnkiImportModal extends Modal {
 		this.deckService = deckService;
 		this.settings = settings;
 		this.destinationFolder = settings.defaultImportFolder;
-		this.importService = new AnkiImportService(app, templateService, settings);
+		this.importService = new AnkiImportService(
+			app,
+			templateService,
+			settings,
+		);
 	}
 
 	onOpen() {
@@ -131,7 +142,9 @@ export class AnkiImportModal extends Modal {
 		this.renderFilePicker(contentEl);
 
 		// Deck list container (populated after file is selected)
-		this.deckListContainer = contentEl.createDiv({ cls: "anki-import-deck-list" });
+		this.deckListContainer = contentEl.createDiv({
+			cls: "anki-import-deck-list",
+		});
 
 		// Destination folder selector
 		this.renderFolderSelector(contentEl);
@@ -153,14 +166,20 @@ export class AnkiImportModal extends Modal {
 		});
 
 		// Button row
-		const buttonRow = contentEl.createDiv({ cls: "flashcard-modal-buttons-v2" });
+		const buttonRow = contentEl.createDiv({
+			cls: "flashcard-modal-buttons-v2",
+		});
 
-		const leftButtons = buttonRow.createDiv({ cls: "flashcard-buttons-left" });
+		const leftButtons = buttonRow.createDiv({
+			cls: "flashcard-buttons-left",
+		});
 		new ButtonComponent(leftButtons)
 			.setButtonText("Cancel")
 			.onClick(() => this.close());
 
-		const rightButtons = buttonRow.createDiv({ cls: "flashcard-buttons-right" });
+		const rightButtons = buttonRow.createDiv({
+			cls: "flashcard-buttons-right",
+		});
 		this.importButton = new ButtonComponent(rightButtons)
 			.setButtonText("Import")
 			.setCta()
@@ -177,7 +196,9 @@ export class AnkiImportModal extends Modal {
 	 * Render the file picker section.
 	 */
 	private renderFilePicker(container: HTMLElement): void {
-		const fileSection = container.createDiv({ cls: "anki-import-file-section" });
+		const fileSection = container.createDiv({
+			cls: "anki-import-file-section",
+		});
 
 		const fileInput = document.createElement("input");
 		fileInput.type = "file";
@@ -210,7 +231,9 @@ export class AnkiImportModal extends Modal {
 	 * Render the destination folder selector.
 	 */
 	private renderFolderSelector(container: HTMLElement): void {
-		const folderSection = container.createDiv({ cls: "anki-import-folder-section" });
+		const folderSection = container.createDiv({
+			cls: "anki-import-folder-section",
+		});
 
 		new Setting(folderSection)
 			.setName("Import to folder")
@@ -251,7 +274,9 @@ export class AnkiImportModal extends Modal {
 		}
 
 		// Add the default import folder if not already present
-		if (!folders.some((f) => f.path === this.settings.defaultImportFolder)) {
+		if (
+			!folders.some((f) => f.path === this.settings.defaultImportFolder)
+		) {
 			folders.unshift({ path: this.settings.defaultImportFolder });
 		}
 
@@ -271,13 +296,21 @@ export class AnkiImportModal extends Modal {
 		});
 
 		try {
-			const isSupported = await this.importService.isSupportedApkg(this.selectedFile);
+			const isSupported = await this.importService.isSupportedApkg(
+				this.selectedFile,
+			);
 			if (!isSupported) {
-				throw new Error("Unsupported Anki export. Please export using Anki 2.1.50+ (.anki21b)");
+				throw new Error(
+					"Unsupported Anki export. Please export using Anki 2.1.50+ (.anki21b)",
+				);
 			}
 
-			this.packageData = await this.importService.parseApkg(this.selectedFile);
-			this.deckSelections = this.importService.buildDeckHierarchy(this.packageData);
+			this.packageData = await this.importService.parseApkg(
+				this.selectedFile,
+			);
+			this.deckSelections = this.importService.buildDeckHierarchy(
+				this.packageData,
+			);
 
 			// Auto-select all by default
 			for (const selection of this.deckSelections) {
@@ -336,7 +369,9 @@ export class AnkiImportModal extends Modal {
 			});
 
 		// Deck list
-		const listEl = this.deckListContainer.createDiv({ cls: "anki-import-decks" });
+		const listEl = this.deckListContainer.createDiv({
+			cls: "anki-import-decks",
+		});
 
 		for (const selection of this.deckSelections) {
 			const deckRow = listEl.createDiv({ cls: "anki-import-deck-row" });
@@ -357,7 +392,8 @@ export class AnkiImportModal extends Modal {
 
 			// Deck name (display only the last part for nested decks)
 			const nameParts = selection.deck.name.split("::");
-			const displayName = nameParts[nameParts.length - 1] ?? selection.deck.name;
+			const displayName =
+				nameParts[nameParts.length - 1] ?? selection.deck.name;
 
 			deckRow.createSpan({
 				text: displayName,
@@ -425,7 +461,11 @@ export class AnkiImportModal extends Modal {
 	/**
 	 * Update the progress bar.
 	 */
-	private updateProgress(current: number, total: number, message: string): void {
+	private updateProgress(
+		current: number,
+		total: number,
+		message: string,
+	): void {
 		if (this.progressBar) {
 			const percent = total > 0 ? (current / total) * 100 : 0;
 			this.progressBar.style.width = `${percent}%`;

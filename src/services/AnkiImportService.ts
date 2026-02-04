@@ -19,7 +19,10 @@ import type {
 } from "../types";
 import { PROTECTION_COMMENT } from "../types";
 import { AnkiContentConverter } from "./AnkiContentConverter";
-import { AnkiTemplateConverter, type ConvertedTemplate } from "./AnkiTemplateConverter";
+import {
+	AnkiTemplateConverter,
+	type ConvertedTemplate,
+} from "./AnkiTemplateConverter";
 import type { TemplateService } from "../flashcards/TemplateService";
 import { createEmptyCard } from "ts-fsrs";
 
@@ -35,7 +38,7 @@ export interface ImportResult {
 
 /**
  * Service for importing Anki .apkg backup files.
- * 
+ *
  * Flow:
  * 1. Extract ZIP archive (apkg is just a zip)
  * 2. Parse SQLite database (collection.anki21b)
@@ -72,8 +75,7 @@ export class AnkiImportService {
 		if (!this.sqlPromise) {
 			this.sqlPromise = initSqlJs({
 				// Use CDN for WASM file to avoid bundling issues
-				locateFile: (file: string) =>
-					`https://sql.js.org/dist/${file}`,
+				locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
 			});
 		}
 		return this.sqlPromise;
@@ -90,7 +92,9 @@ export class AnkiImportService {
 		// collection.anki21b is zstd-compressed SQLite
 		const dbFile = zip.file("collection.anki21b");
 		if (!dbFile) {
-			throw new Error("Unsupported Anki export. Please export using Anki 2.1.50+ (.anki21b)");
+			throw new Error(
+				"Unsupported Anki export. Please export using Anki 2.1.50+ (.anki21b)",
+			);
 		}
 
 		// Load the media mapping (protobuf, possibly zstd-compressed)
@@ -99,15 +103,15 @@ export class AnkiImportService {
 		if (mediaFile) {
 			const mediaBuffer = await mediaFile.async("arraybuffer");
 			const mediaBytes = new Uint8Array(mediaBuffer);
-			
+
 			// Check if media is zstd compressed (magic bytes: 28 b5 2f fd)
-			const isZstdCompressed = 
+			const isZstdCompressed =
 				mediaBytes.length >= 4 &&
-				mediaBytes[0] === 0x28 && 
-				mediaBytes[1] === 0xb5 && 
-				mediaBytes[2] === 0x2f && 
+				mediaBytes[0] === 0x28 &&
+				mediaBytes[1] === 0xb5 &&
+				mediaBytes[2] === 0x2f &&
 				mediaBytes[3] === 0xfd;
-			
+
 			let mediaData: Uint8Array;
 			if (isZstdCompressed) {
 				// Decompress zstd data
@@ -115,7 +119,7 @@ export class AnkiImportService {
 			} else {
 				mediaData = mediaBytes;
 			}
-			
+
 			// Protobuf format (Anki 2.1.50+)
 			// MediaEntries { repeated MediaEntry entries = 1; }
 			// MediaEntry { string name = 1; uint32 size = 2; bytes sha1 = 3; }
@@ -137,9 +141,11 @@ export class AnkiImportService {
 			const decompressed = zstdDecompress(dbBytes);
 			dbBuffer = decompressed.slice().buffer;
 		} else {
-			throw new Error("Unsupported Anki export. Expected zstd-compressed collection.anki21b");
+			throw new Error(
+				"Unsupported Anki export. Expected zstd-compressed collection.anki21b",
+			);
 		}
-		
+
 		const db = new SQL.Database(new Uint8Array(dbBuffer));
 
 		try {
@@ -177,14 +183,18 @@ export class AnkiImportService {
 		const models = new Map<string, AnkiModel>();
 
 		// Get note types
-		const notetypesResult = db.exec("SELECT id, name, config FROM notetypes");
+		const notetypesResult = db.exec(
+			"SELECT id, name, config FROM notetypes",
+		);
 		if (notetypesResult.length === 0) {
-			throw new Error("Unsupported Anki export. Missing notetypes table.");
+			throw new Error(
+				"Unsupported Anki export. Missing notetypes table.",
+			);
 		}
 
 		// Get fields grouped by notetype
 		const fieldsResult = db.exec(
-			"SELECT ntid, ord, name FROM fields ORDER BY ntid, ord"
+			"SELECT ntid, ord, name FROM fields ORDER BY ntid, ord",
 		);
 		const fieldsByNtid = new Map<string, AnkiField[]>();
 		if (fieldsResult.length > 0) {
@@ -206,17 +216,19 @@ export class AnkiImportService {
 
 		// Get templates grouped by notetype
 		const templatesResult = db.exec(
-			"SELECT ntid, ord, name, config FROM templates ORDER BY ntid, ord"
+			"SELECT ntid, ord, name, config FROM templates ORDER BY ntid, ord",
 		);
 		const templatesByNtid = new Map<string, AnkiCardTemplate[]>();
 		if (templatesResult.length > 0) {
 			for (const row of templatesResult[0]?.values ?? []) {
 				const ntid = String(row[0]);
 				const configBytes = row[3];
-				
+
 				// Parse template config from protobuf
 				const { qfmt, afmt } = this.parseTemplateConfig(
-					configBytes instanceof Uint8Array ? configBytes : new Uint8Array()
+					configBytes instanceof Uint8Array
+						? configBytes
+						: new Uint8Array(),
 				);
 
 				if (!templatesByNtid.has(ntid)) {
@@ -239,10 +251,12 @@ export class AnkiImportService {
 			const id = String(row[0]);
 			const name = row[1] as string;
 			const configBytes = row[2];
-			
+
 			// Parse notetype config to get type (standard vs cloze)
 			const notetypeType = this.parseNotetypeConfig(
-				configBytes instanceof Uint8Array ? configBytes : new Uint8Array()
+				configBytes instanceof Uint8Array
+					? configBytes
+					: new Uint8Array(),
 			);
 
 			const flds = fieldsByNtid.get(id) ?? [];
@@ -271,12 +285,15 @@ export class AnkiImportService {
 	 * Parse template config from protobuf blob.
 	 * The config contains qfmt (question format) and afmt (answer format).
 	 */
-	private parseTemplateConfig(data: Uint8Array): { qfmt: string; afmt: string } {
+	private parseTemplateConfig(data: Uint8Array): {
+		qfmt: string;
+		afmt: string;
+	} {
 		// The template config protobuf has:
 		// field 1 = qfmt (string)
 		// field 2 = afmt (string)
 		// We'll parse it manually since the structure is simple
-		
+
 		if (data.length === 0) {
 			return { qfmt: "", afmt: "" };
 		}
@@ -290,11 +307,12 @@ export class AnkiImportService {
 			const tag = data[pos];
 			if (tag === undefined) break;
 			pos++;
-			
+
 			const fieldNumber = tag >> 3;
 			const wireType = tag & 0x07;
 
-			if (wireType === 2) { // Length-delimited (string)
+			if (wireType === 2) {
+				// Length-delimited (string)
 				// Read length (varint)
 				let length = 0;
 				let shift = 0;
@@ -317,7 +335,8 @@ export class AnkiImportService {
 				} else if (fieldNumber === 2) {
 					afmt = str;
 				}
-			} else if (wireType === 0) { // Varint
+			} else if (wireType === 0) {
+				// Varint
 				// Skip varint
 				while (pos < data.length && (data[pos]! & 0x80) !== 0) {
 					pos++;
@@ -338,7 +357,7 @@ export class AnkiImportService {
 	private parseNotetypeConfig(data: Uint8Array): number {
 		// Notetype config field 4 = kind (enum: 0=normal, 1=cloze)
 		// We'll look for field 4 with varint value
-		
+
 		if (data.length === 0) {
 			return 0;
 		}
@@ -348,11 +367,12 @@ export class AnkiImportService {
 			const tag = data[pos];
 			if (tag === undefined) break;
 			pos++;
-			
+
 			const fieldNumber = tag >> 3;
 			const wireType = tag & 0x07;
 
-			if (wireType === 0) { // Varint
+			if (wireType === 0) {
+				// Varint
 				// Read varint value
 				let value = 0;
 				let shift = 0;
@@ -368,7 +388,8 @@ export class AnkiImportService {
 				if (fieldNumber === 4) {
 					return value; // 0 = normal, 1 = cloze
 				}
-			} else if (wireType === 2) { // Length-delimited
+			} else if (wireType === 2) {
+				// Length-delimited
 				// Read and skip
 				let length = 0;
 				let shift = 0;
@@ -403,7 +424,7 @@ export class AnkiImportService {
 		for (const row of result[0]?.values ?? []) {
 			const id = Number(row[0]);
 			const name = row[1] as string;
-			
+
 			decks.set(id, {
 				id,
 				name,
@@ -423,7 +444,9 @@ export class AnkiImportService {
 	private parseNotes(db: Database): AnkiNote[] {
 		const notes: AnkiNote[] = [];
 
-		const result = db.exec("SELECT id, guid, mid, mod, tags, flds, sfld FROM notes");
+		const result = db.exec(
+			"SELECT id, guid, mid, mod, tags, flds, sfld FROM notes",
+		);
 		if (result.length === 0) {
 			return notes;
 		}
@@ -438,7 +461,12 @@ export class AnkiImportService {
 				mod: row[3] as number,
 				tags: row[4] as string,
 				flds: row[5] as string,
-				sfld: typeof sfldValue === "string" ? sfldValue : (typeof sfldValue === "number" ? sfldValue.toString() : ""),
+				sfld:
+					typeof sfldValue === "string"
+						? sfldValue
+						: typeof sfldValue === "number"
+							? sfldValue.toString()
+							: "",
 			});
 		}
 
@@ -481,18 +509,20 @@ export class AnkiImportService {
 
 	/**
 	 * Parse media entries from protobuf format (Anki 2.1.50+).
-	 * 
+	 *
 	 * Protobuf schema:
 	 * message MediaEntries { repeated MediaEntry entries = 1; }
 	 * message MediaEntry { string name = 1; uint32 size = 2; bytes sha1 = 3; }
-	 * 
+	 *
 	 * Returns a map of index (as string) -> filename.
 	 */
 	private parseMediaProtobuf(data: Uint8Array): Map<string, string> {
 		const mediaMap = new Map<string, string>();
 		const mediaEntriesType = this.getMediaProtoType();
 		const decoded = mediaEntriesType.decode(data);
-		const object = mediaEntriesType.toObject(decoded, { defaults: false }) as unknown;
+		const object = mediaEntriesType.toObject(decoded, {
+			defaults: false,
+		}) as unknown;
 		const entriesValue =
 			typeof object === "object" && object !== null
 				? (object as { entries?: unknown }).entries
@@ -632,7 +662,11 @@ export class AnkiImportService {
 			if (!model) continue;
 
 			currentStep++;
-			onProgress?.(currentStep, totalSteps, `Creating template: ${model.name}`);
+			onProgress?.(
+				currentStep,
+				totalSteps,
+				`Creating template: ${model.name}`,
+			);
 
 			try {
 				const templates = this.templateConverter.convertModel(model);
@@ -644,7 +678,9 @@ export class AnkiImportService {
 					result.templatesCreated++;
 				}
 			} catch (error) {
-				result.errors.push(`Failed to create template for ${model.name}: ${(error as Error).message}`);
+				result.errors.push(
+					`Failed to create template for ${model.name}: ${(error as Error).message}`,
+				);
 			}
 		}
 
@@ -701,7 +737,9 @@ export class AnkiImportService {
 				mediaUuidMap.set(originalName, uuidFilename);
 				result.mediaImported++;
 			} catch (error) {
-				result.errors.push(`Failed to import media ${originalName}: ${(error as Error).message}`);
+				result.errors.push(
+					`Failed to import media ${originalName}: ${(error as Error).message}`,
+				);
 			}
 		}
 
@@ -738,7 +776,9 @@ export class AnkiImportService {
 				);
 				result.cardsImported++;
 			} catch (error) {
-				result.errors.push(`Failed to import note ${note.id}: ${(error as Error).message}`);
+				result.errors.push(
+					`Failed to import note ${note.id}: ${(error as Error).message}`,
+				);
 			}
 		}
 
@@ -800,7 +840,10 @@ export class AnkiImportService {
 				const uuidName = mediaUuidMap.get(originalName);
 				if (uuidName) {
 					finalMarkdown = finalMarkdown.replace(
-						new RegExp(`!\\[\\[${this.escapeRegex(originalName)}\\]\\]`, "g"),
+						new RegExp(
+							`!\\[\\[${this.escapeRegex(originalName)}\\]\\]`,
+							"g",
+						),
 						`![[${uuidName}]]`,
 					);
 				}

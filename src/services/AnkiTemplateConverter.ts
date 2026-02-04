@@ -20,7 +20,7 @@ export interface ConvertedTemplate {
 
 /**
  * Service for converting Anki HTML templates to Nunjucks Markdown templates.
- * 
+ *
  * Conversion pipeline:
  * 1. Tokenize Anki {{Field}} placeholders with safe markers
  * 2. Convert HTML to Markdown via Turndown
@@ -66,8 +66,7 @@ export class AnkiTemplateConverter {
 		this.turndown.addRule("answerSeparator", {
 			filter: (node: HTMLElement): boolean => {
 				return (
-					node.nodeName.toLowerCase() === "hr" &&
-					node.id === "answer"
+					node.nodeName.toLowerCase() === "hr" && node.id === "answer"
 				);
 			},
 			replacement: () => "\n\n---\n\n",
@@ -112,7 +111,10 @@ export class AnkiTemplateConverter {
 	/**
 	 * Convert a single Anki card template to Nunjucks format.
 	 */
-	convertTemplate(model: AnkiModel, tmpl: AnkiCardTemplate): ConvertedTemplate {
+	convertTemplate(
+		model: AnkiModel,
+		tmpl: AnkiCardTemplate,
+	): ConvertedTemplate {
 		// Get field names for variable extraction
 		const fieldNames = model.flds.map((f) => f.name);
 
@@ -159,7 +161,10 @@ export class AnkiTemplateConverter {
 	 */
 	private convertTemplateHtml(html: string, fieldNames: string[]): string {
 		// Step 1: Tokenize Anki placeholders with safe markers
-		const { tokenized, tokens } = this.tokenizePlaceholders(html, fieldNames);
+		const { tokenized, tokens } = this.tokenizePlaceholders(
+			html,
+			fieldNames,
+		);
 
 		// Step 2: Convert HTML to Markdown
 		let markdown = this.turndown.turndown(tokenized);
@@ -188,15 +193,18 @@ export class AnkiTemplateConverter {
 		// {{Field}}, {{#Field}}, {{^Field}}, {{/Field}}, {{FrontSide}}, {{cloze:Field}}
 		const placeholderRegex = /\{\{([#^/])?([^{}]+)\}\}/g;
 
-		const tokenized = html.replace(placeholderRegex, (match, prefix: string | undefined, content: string) => {
-			const token = `${this.placeholderPrefix}${counter}${this.placeholderSuffix}`;
-			counter++;
+		const tokenized = html.replace(
+			placeholderRegex,
+			(match, prefix: string | undefined, content: string) => {
+				const token = `${this.placeholderPrefix}${counter}${this.placeholderSuffix}`;
+				counter++;
 
-			// Store the original match for restoration
-			tokens.set(token, match);
+				// Store the original match for restoration
+				tokens.set(token, match);
 
-			return token;
-		});
+				return token;
+			},
+		);
 
 		return { tokenized, tokens };
 	}
@@ -204,7 +212,10 @@ export class AnkiTemplateConverter {
 	/**
 	 * Restore placeholders and transpile to Nunjucks syntax.
 	 */
-	private restorePlaceholders(markdown: string, tokens: Map<string, string>): string {
+	private restorePlaceholders(
+		markdown: string,
+		tokens: Map<string, string>,
+	): string {
 		let result = markdown;
 
 		for (const [token, original] of tokens) {
@@ -217,7 +228,7 @@ export class AnkiTemplateConverter {
 
 	/**
 	 * Transpile Anki template syntax to Nunjucks.
-	 * 
+	 *
 	 * Mappings:
 	 * - {{Field}} -> {{ Field }}
 	 * - {{#Field}} -> {% if Field %}
@@ -267,7 +278,8 @@ export class AnkiTemplateConverter {
 	 * Extract unique variable names from a Nunjucks template.
 	 */
 	private extractVariables(template: string): string[] {
-		const variableRegex = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_\s]*)\s*(?:\|[^}]*)?\}\}/g;
+		const variableRegex =
+			/\{\{\s*([a-zA-Z_][a-zA-Z0-9_\s]*)\s*(?:\|[^}]*)?\}\}/g;
 		const variables = new Set<string>();
 
 		let match;
@@ -276,7 +288,15 @@ export class AnkiTemplateConverter {
 			if (!name) continue;
 
 			// Skip Nunjucks builtins and special values
-			const skip = ["loop", "super", "self", "true", "false", "none", "FrontSide"];
+			const skip = [
+				"loop",
+				"super",
+				"self",
+				"true",
+				"false",
+				"none",
+				"FrontSide",
+			];
 			if (!skip.includes(name)) {
 				variables.add(name);
 			}
@@ -289,26 +309,30 @@ export class AnkiTemplateConverter {
 	 * Clean up whitespace in converted template.
 	 */
 	private cleanupWhitespace(markdown: string): string {
-		return markdown
-			// Replace multiple blank lines with double newline
-			.replace(/\n{3,}/g, "\n\n")
-			// Remove trailing whitespace on lines
-			.replace(/[ \t]+$/gm, "")
-			// Trim
-			.trim();
+		return (
+			markdown
+				// Replace multiple blank lines with double newline
+				.replace(/\n{3,}/g, "\n\n")
+				// Remove trailing whitespace on lines
+				.replace(/[ \t]+$/gm, "")
+				// Trim
+				.trim()
+		);
 	}
 
 	/**
 	 * Sanitize template name for use as filename.
 	 */
 	private sanitizeTemplateName(name: string): string {
-		return name
-			// Replace problematic characters
-			.replace(/[\\/:*?"<>|]/g, "-")
-			// Collapse multiple dashes
-			.replace(/-+/g, "-")
-			// Trim dashes from ends
-			.replace(/^-|-$/g, "")
-			.trim();
+		return (
+			name
+				// Replace problematic characters
+				.replace(/[\\/:*?"<>|]/g, "-")
+				// Collapse multiple dashes
+				.replace(/-+/g, "-")
+				// Trim dashes from ends
+				.replace(/^-|-$/g, "")
+				.trim()
+		);
 	}
 }
