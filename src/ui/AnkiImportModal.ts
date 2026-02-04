@@ -232,7 +232,6 @@ export class AnkiImportModal extends Modal {
 
 			void this.parseSelectedFile();
 		});
-
 	}
 
 	/**

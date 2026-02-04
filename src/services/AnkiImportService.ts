@@ -858,9 +858,8 @@ export class AnkiImportService {
 				if (!template) continue;
 
 				const templatePath = `${templateFolder}/${template.name}.md`;
-				const existing = this.app.vault.getAbstractFileByPath(
-					templatePath,
-				);
+				const existing =
+					this.app.vault.getAbstractFileByPath(templatePath);
 				if (existing) {
 					conflicts.add(template.name);
 				}
@@ -982,9 +981,7 @@ export class AnkiImportService {
 				await this.app.vault.modify(existing, content);
 				return;
 			}
-			throw new Error(
-				`Cannot overwrite non-file path: ${filePath}`,
-			);
+			throw new Error(`Cannot overwrite non-file path: ${filePath}`);
 		}
 
 		await this.app.vault.create(filePath, content);
@@ -1124,5 +1121,4 @@ export class AnkiImportService {
 	): string {
 		return fieldNameMap?.get(name) ?? name;
 	}
-
 }
