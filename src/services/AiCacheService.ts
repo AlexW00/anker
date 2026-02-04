@@ -105,15 +105,20 @@ export class AiCacheService {
 				try {
 					// Load current data to merge with
 					const currentData =
-						((await this.loadDataFn!()) as Record<string, unknown>) ||
-						{};
+						((await this.loadDataFn!()) as Record<
+							string,
+							unknown
+						>) || {};
 					await this.saveDataFn!({
 						...currentData,
 						aiCache: this.cache,
 					});
 					this.dirty = false;
 				} catch (error) {
-					console.error("AiCacheService: Failed to save cache", error);
+					console.error(
+						"AiCacheService: Failed to save cache",
+						error,
+					);
 				}
 			})();
 		}, 1000);

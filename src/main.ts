@@ -20,7 +20,10 @@ import { ReviewView, REVIEW_VIEW_TYPE } from "./ui/ReviewView";
 import { DeckSelectorModal } from "./ui/DeckSelectorModal";
 import { TemplateSelectorModal } from "./ui/TemplateSelectorModal";
 import { TemplateNameModal } from "./ui/TemplateNameModal";
-import { showCardCreationModal, showCardEditModal } from "./ui/CardCreationFlow";
+import {
+	showCardCreationModal,
+	showCardEditModal,
+} from "./ui/CardCreationFlow";
 import { OrphanAttachmentsModal } from "./ui/OrphanAttachmentsModal";
 import { AnkiImportModal } from "./ui/AnkiImportModal";
 
@@ -207,7 +210,11 @@ export default class AnkerPlugin extends Plugin {
 	getApiKey(provider: AiProviderType): string | null {
 		const key = `${API_KEY_PREFIX}${provider}`;
 		// Use Obsidian's SecretStorage API (sync) - available in 1.11.4+
-		const secrets = (this.app as unknown as { secrets?: { getSecret: (id: string) => string | null } }).secrets;
+		const secrets = (
+			this.app as unknown as {
+				secrets?: { getSecret: (id: string) => string | null };
+			}
+		).secrets;
 		return secrets?.getSecret(key) ?? null;
 	}
 
@@ -217,7 +224,11 @@ export default class AnkerPlugin extends Plugin {
 	setApiKey(provider: AiProviderType, apiKey: string): void {
 		const key = `${API_KEY_PREFIX}${provider}`;
 		// Use Obsidian's SecretStorage API (sync) - available in 1.11.4+
-		const secrets = (this.app as unknown as { secrets?: { setSecret: (id: string, secret: string) => void } }).secrets;
+		const secrets = (
+			this.app as unknown as {
+				secrets?: { setSecret: (id: string, secret: string) => void };
+			}
+		).secrets;
 		secrets?.setSecret(key, apiKey);
 	}
 
@@ -227,7 +238,11 @@ export default class AnkerPlugin extends Plugin {
 	deleteApiKey(provider: AiProviderType): void {
 		const key = `${API_KEY_PREFIX}${provider}`;
 		// Use Obsidian's SecretStorage API - set empty string to "delete"
-		const secrets = (this.app as unknown as { secrets?: { setSecret: (id: string, secret: string) => void } }).secrets;
+		const secrets = (
+			this.app as unknown as {
+				secrets?: { setSecret: (id: string, secret: string) => void };
+			}
+		).secrets;
 		secrets?.setSecret(key, "");
 	}
 

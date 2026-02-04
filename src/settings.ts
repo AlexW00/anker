@@ -1,5 +1,9 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice } from "obsidian";
-import type { PluginWithSettings, AiProviderType, AiProviderConfig } from "./types";
+import type {
+	PluginWithSettings,
+	AiProviderType,
+	AiProviderConfig,
+} from "./types";
 import {
 	ALL_DECK_VIEW_COLUMNS,
 	DECK_VIEW_COLUMN_LABELS,
@@ -517,10 +521,11 @@ export class AnkerSettingTab extends PluginSettingTab {
 					.setButtonText("Delete")
 					.setWarning()
 					.onClick(async () => {
-						 
 						delete this.plugin.settings.aiProviders[id];
 						// Clear pipe assignments that used this provider
-						if (this.plugin.settings.aiPipeProviders?.askAi === id) {
+						if (
+							this.plugin.settings.aiPipeProviders?.askAi === id
+						) {
 							this.plugin.settings.aiPipeProviders.askAi =
 								undefined;
 						}
@@ -647,14 +652,13 @@ export class AnkerSettingTab extends PluginSettingTab {
 			new Setting(providerContainer)
 				.setName("Speech voice")
 				.addDropdown((dropdown) => {
-					 
 					dropdown.addOption("alloy", "Alloy");
 					dropdown.addOption("echo", "Echo");
 					dropdown.addOption("fable", "Fable");
 					dropdown.addOption("onyx", "Onyx");
 					dropdown.addOption("nova", "Nova");
 					dropdown.addOption("shimmer", "Shimmer");
-					 
+
 					dropdown.setValue(config.speechVoice ?? "alloy");
 					dropdown.onChange(async (value) => {
 						this.plugin.settings.aiProviders[id] = {

@@ -515,8 +515,7 @@ export class CardRegenService {
 			// Create a queue of promises that process in batches
 			const processCard = async (cardPath: string) => {
 				try {
-					const file =
-						this.app.vault.getAbstractFileByPath(cardPath);
+					const file = this.app.vault.getAbstractFileByPath(cardPath);
 					if (file instanceof TFile) {
 						await this.cardService.regenerateCard(file, {
 							skipCache,

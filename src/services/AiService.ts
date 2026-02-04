@@ -129,7 +129,9 @@ export class AiService {
 				});
 			default: {
 				const exhaustiveCheck: never = config.type;
-				throw new Error(`Unknown provider type: ${exhaustiveCheck as string}`);
+				throw new Error(
+					`Unknown provider type: ${exhaustiveCheck as string}`,
+				);
 			}
 		}
 	}
@@ -152,12 +154,14 @@ export class AiService {
 	 * Process queued tasks with concurrency control.
 	 */
 	private processQueue(): void {
-		while (this.activeCount < this.maxConcurrency && this.queue.length > 0) {
+		while (
+			this.activeCount < this.maxConcurrency &&
+			this.queue.length > 0
+		) {
 			const item = this.queue.shift()!;
 			this.activeCount++;
 
-			item
-				.task()
+			item.task()
 				.then((result) => {
 					item.resolve(result);
 				})
@@ -202,7 +206,8 @@ export class AiService {
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
 			const provider = this.createProvider(config);
-			const modelId = config.textModel ?? this.getDefaultTextModel(config.type);
+			const modelId =
+				config.textModel ?? this.getDefaultTextModel(config.type);
 
 			const response = await generateText({
 				model: provider(modelId),
@@ -253,7 +258,8 @@ export class AiService {
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
 			const provider = this.createProvider(config);
-			const modelId = config.imageModel ?? this.getDefaultImageModel(config.type);
+			const modelId =
+				config.imageModel ?? this.getDefaultImageModel(config.type);
 
 			// Only OpenAI supports image generation via AI SDK currently
 			if (config.type !== "openai") {
@@ -320,7 +326,8 @@ export class AiService {
 		// Enqueue the API call
 		const result = await this.enqueue(async () => {
 			const provider = this.createProvider(config);
-			const modelId = config.speechModel ?? this.getDefaultSpeechModel(config.type);
+			const modelId =
+				config.speechModel ?? this.getDefaultSpeechModel(config.type);
 			const voice = config.speechVoice ?? "alloy";
 
 			// Only OpenAI supports speech generation via AI SDK currently
@@ -368,7 +375,8 @@ export class AiService {
 		extension: string,
 		cardPath?: string,
 	): Promise<string> {
-		const attachmentFolder = this.settings.attachmentFolder || "attachments";
+		const attachmentFolder =
+			this.settings.attachmentFolder || "attachments";
 
 		// Ensure folder exists
 		const folderPath = normalizePath(attachmentFolder);

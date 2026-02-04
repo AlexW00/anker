@@ -126,7 +126,10 @@ export class CardService {
 	/**
 	 * Regenerate a flashcard's body from its template and fields.
 	 */
-	async regenerateCard(file: TFile, options: RegenerateOptions = {}): Promise<void> {
+	async regenerateCard(
+		file: TFile,
+		options: RegenerateOptions = {},
+	): Promise<void> {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
 
@@ -159,10 +162,14 @@ export class CardService {
 		};
 
 		// Render new body (use template.body which excludes template frontmatter) - now async for AI filters
-		const body = await this.templateService.render(template.body, userFields, {
-			skipCache: options.skipCache,
-			cardPath: file.path,
-		});
+		const body = await this.templateService.render(
+			template.body,
+			userFields,
+			{
+				skipCache: options.skipCache,
+				cardPath: file.path,
+			},
+		);
 
 		// Merge existing frontmatter + template frontmatter + system overrides
 		const mergedFrontmatter = this.mergeTemplateFrontmatter(
@@ -227,9 +234,8 @@ export class CardService {
 		const resolvedTemplatePath = templatePath ?? fm._template;
 
 		// Load template
-		const template = await this.templateService.loadTemplate(
-			resolvedTemplatePath,
-		);
+		const template =
+			await this.templateService.loadTemplate(resolvedTemplatePath);
 		if (!template) {
 			throw new Error(`Template not found: ${resolvedTemplatePath}`);
 		}
