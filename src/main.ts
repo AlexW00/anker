@@ -461,8 +461,9 @@ export default class AnkerPlugin extends Plugin {
 		if (activeFile) {
 			if (this.isTemplateFile(activeFile)) {
 				initialTemplate =
-					(await this.templateService.loadTemplate(activeFile.path)) ??
-					undefined;
+					(await this.templateService.loadTemplate(
+						activeFile.path,
+					)) ?? undefined;
 			} else if (this.isDeckBaseFile(activeFile)) {
 				// Extract deck path from base file (e.g., "deck/path/flashcards.base" -> "deck/path")
 				initialDeckPath = activeFile.parent?.path;

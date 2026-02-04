@@ -502,8 +502,7 @@ export class CardFormModal extends Modal {
 			const cacheLabel = rightButtons.createEl("label", {
 				cls: "flashcard-create-another-toggle",
 				attr: {
-					title:
-						"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
+					title: "When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
 				},
 			});
 			this.cacheCheckbox = cacheLabel.createEl("input", {

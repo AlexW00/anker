@@ -1,8 +1,5 @@
 import { App, ButtonComponent, Modal, TFile } from "obsidian";
-import type {
-	Flashcard,
-	FlashcardTemplate,
-} from "../types";
+import type { Flashcard, FlashcardTemplate } from "../types";
 import type { CardService } from "../flashcards/CardService";
 import { FailedCardsModal, type FailedCard } from "./FailedCardsModal";
 
@@ -155,8 +152,7 @@ export class TemplateRegenModal extends Modal {
 		const cacheLabel = rightButtons.createEl("label", {
 			cls: "template-regen-cache-toggle",
 			attr: {
-				title:
-					"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
+				title: "When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
 			},
 		});
 		this.cacheCheckbox = cacheLabel.createEl("input", {
@@ -200,7 +196,7 @@ export class TemplateRegenModal extends Modal {
 		if (this.isRegenerating) {
 			this.isCancelled = true;
 		}
-		
+
 		// If modal was closed without completing regeneration, notify with cancelled result
 		if (!this.didComplete) {
 			this.didComplete = true;
@@ -210,7 +206,7 @@ export class TemplateRegenModal extends Modal {
 				cancelled: true,
 			});
 		}
-		
+
 		this.contentEl.empty();
 	}
 
@@ -253,7 +249,8 @@ export class TemplateRegenModal extends Modal {
 		if (!this.cardListContainer) return;
 
 		const container = this.cardListContainer;
-		const totalHeight = this.cardItems.length * TemplateRegenModal.ITEM_HEIGHT;
+		const totalHeight =
+			this.cardItems.length * TemplateRegenModal.ITEM_HEIGHT;
 
 		// Create scrollable container with total height
 		const scrollContainer = container.createDiv({
@@ -304,7 +301,10 @@ export class TemplateRegenModal extends Modal {
 		);
 
 		// Only re-render if range changed
-		if (startIndex === this.visibleStartIndex && endIndex === this.visibleEndIndex) {
+		if (
+			startIndex === this.visibleStartIndex &&
+			endIndex === this.visibleEndIndex
+		) {
 			return;
 		}
 
@@ -381,12 +381,15 @@ export class TemplateRegenModal extends Modal {
 	private updateRegenerateButton(): void {
 		const hasSelection = this.cardItems.some((i) => i.selected);
 		const selectedCount = this.cardItems.filter((i) => i.selected).length;
-		this.regenerateButton?.setDisabled(!hasSelection || this.isRegenerating);
+		this.regenerateButton?.setDisabled(
+			!hasSelection || this.isRegenerating,
+		);
 
 		if (!this.isRegenerating) {
-			const buttonText = selectedCount === 1
-				? "Regenerate 1 card"
-				: `Regenerate ${selectedCount} cards`;
+			const buttonText =
+				selectedCount === 1
+					? "Regenerate 1 card"
+					: `Regenerate ${selectedCount} cards`;
 			this.regenerateButton?.setButtonText(buttonText);
 		}
 	}
@@ -446,7 +449,9 @@ export class TemplateRegenModal extends Modal {
 
 				// Update status with current card name
 				const fileName = file.basename;
-				this.setStatusText(`Regenerating ${i + 1}/${selectedItems.length}: ${fileName}`);
+				this.setStatusText(
+					`Regenerating ${i + 1}/${selectedItems.length}: ${fileName}`,
+				);
 
 				try {
 					await this.cardService.regenerateCard(file, {
@@ -535,7 +540,9 @@ export class TemplateRegenModal extends Modal {
 		if (isRegenerating) {
 			this.regenerateButton?.setButtonText("Regenerating...");
 			if (this.regenerateButton?.buttonEl) {
-				this.regenerateButton.buttonEl.addClass("flashcard-button-loading");
+				this.regenerateButton.buttonEl.addClass(
+					"flashcard-button-loading",
+				);
 			}
 		}
 
@@ -553,7 +560,9 @@ export class TemplateRegenModal extends Modal {
 
 		// Disable select all / deselect all buttons
 		this.contentEl
-			.querySelectorAll<HTMLButtonElement>(".template-regen-controls button")
+			.querySelectorAll<HTMLButtonElement>(
+				".template-regen-controls button",
+			)
 			.forEach((btn) => {
 				btn.disabled = isRegenerating;
 			});

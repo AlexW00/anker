@@ -283,8 +283,9 @@ export class DashboardView extends ItemView {
 				"review",
 			);
 
-			const dueCount =
-				this.plugin.deckService.getDueCards(deck.path).length;
+			const dueCount = this.plugin.deckService.getDueCards(
+				deck.path,
+			).length;
 			const hasDueCards = dueCount > 0;
 
 			// Actions
