@@ -51,10 +51,10 @@ export interface ReviewState {
 /**
  * Flashcard frontmatter structure.
  * This is the source of truth for all card data.
- * 
+ *
  * Plugin properties are prefixed with underscore to avoid conflicts with user fields.
  * User fields are stored at the top level (flattened from the template variables).
- * 
+ *
  * Example:
  * ```yaml
  * _type: flashcard

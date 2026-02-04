@@ -117,7 +117,11 @@ export class DeckBaseViewService {
 				col === "file.name" ||
 				col === "file.ctime" ||
 				col === "file.mtime";
-			const key = isBuiltIn ? col : (col === "template" ? "_template" : `formula.${col}`);
+			const key = isBuiltIn
+				? col
+				: col === "template"
+					? "_template"
+					: `formula.${col}`;
 
 			properties[key] = {
 				displayName: DECK_VIEW_COLUMN_LABELS[col],
@@ -131,7 +135,11 @@ export class DeckBaseViewService {
 				col === "file.name" ||
 				col === "file.ctime" ||
 				col === "file.mtime";
-			return isBuiltIn ? col : (col === "template" ? "_template" : `formula.${col}`);
+			return isBuiltIn
+				? col
+				: col === "template"
+					? "_template"
+					: `formula.${col}`;
 		});
 
 		// Build filters based on state filter
