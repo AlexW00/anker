@@ -193,6 +193,7 @@
 	width: 100%;
 	margin-left: auto;
 	margin-right: auto;
+	flex-shrink: 0;
 }
 
 .flashcard-review-menu {
@@ -236,6 +237,39 @@
 	color: var(--text-muted);
 }
 
+/* Scroll Wrapper with Fades */
+.flashcard-scroll-wrapper {
+	flex: 1;
+	position: relative;
+	width: 100%;
+	margin-bottom: var(--size-4-4);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.flashcard-fade-top {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 40px;
+	background: linear-gradient(to bottom, var(--background-primary), transparent);
+	pointer-events: none;
+	z-index: 2;
+}
+
+.flashcard-fade-bottom {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 40px;
+	background: linear-gradient(to top, var(--background-primary), transparent);
+	pointer-events: none;
+	z-index: 2;
+}
+
 /* Card */
 .flashcard-card-container {
 	flex: 1;
@@ -243,8 +277,8 @@
 	justify-content: center;
 	align-items: flex-start;
 	overflow-y: auto;
-	margin-bottom: var(--size-4-4);
 	padding: var(--size-4-6);
+	scroll-behavior: smooth;
 }
 
 .flashcard-card {
@@ -290,6 +324,7 @@
 	justify-content: space-between;
 	gap: var(--size-4-2);
 	width: 100%;
+	flex-shrink: 0;
 }
 
 .flashcard-actions {

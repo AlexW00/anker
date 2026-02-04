@@ -1048,7 +1048,9 @@ export class AnkiImportService {
 			// use the interval to set a reasonable due date
 			const now = new Date();
 			// If ivl > 0, schedule for ivl days from now (preserves the interval)
-			dueDate = new Date(now.getTime() + ankiCard.ivl * 24 * 60 * 60 * 1000);
+			dueDate = new Date(
+				now.getTime() + ankiCard.ivl * 24 * 60 * 60 * 1000,
+			);
 		}
 
 		// Map Anki ease factor to FSRS difficulty (inverted scale)

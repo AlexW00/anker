@@ -33,6 +33,11 @@ export class ReviewView extends ItemView {
 	private currentContent: string[] = [];
 	private debouncedReloadCard: () => void;
 
+	// State tracking for partial updates
+	private lastRenderedIndex = -1;
+	private lastRenderedSide = -1;
+	private lastCardPath = "";
+
 	constructor(leaf: WorkspaceLeaf, plugin: AnkerPlugin) {
 		super(leaf);
 		this.plugin = plugin;
@@ -74,7 +79,7 @@ export class ReviewView extends ItemView {
 
 	async onOpen() {
 		this.registerFileChangeListener();
-		this.renderEmpty();
+		this.render();
 	}
 
 	/**
@@ -99,6 +104,8 @@ export class ReviewView extends ItemView {
 	private async reloadCurrentCard() {
 		if (!this.session) return;
 		await this.loadCurrentCard();
+		// Force full re-render for this card
+		this.lastCardPath = ""; 
 		this.render();
 	}
 
@@ -124,6 +131,11 @@ export class ReviewView extends ItemView {
 			currentSide: 0,
 			totalSides: 0,
 		};
+
+		// Reset state
+		this.lastRenderedIndex = -1;
+		this.lastRenderedSide = -1;
+		this.lastCardPath = "";
 
 		await this.loadCurrentCard();
 		void this.render();
@@ -157,37 +169,82 @@ export class ReviewView extends ItemView {
 		const container = this.containerEl.children[1] as HTMLElement;
 		if (!container) return;
 
-		container.empty();
-		container.addClass("flashcard-review");
-
 		if (!this.session) {
-			this.renderEmpty();
+			this.renderEmpty(container);
 			return;
+		}
+
+		container.addClass("flashcard-review");
+		// Remove empty state class if present from previous renders
+		container.removeClass("flashcard-empty-state-container");
+
+		// Ensure persistent structure exists
+		let progressContainer = container.querySelector(
+			".flashcard-review-progress",
+		) as HTMLElement;
+		let cardContainer = container.querySelector(
+			".flashcard-card-container",
+		) as HTMLElement;
+		let controlsContainer = container.querySelector(
+			".flashcard-controls",
+		) as HTMLElement;
+
+		if (!progressContainer || !cardContainer || !controlsContainer) {
+			container.empty();
+
+			progressContainer = container.createDiv({
+				cls: "flashcard-review-progress",
+			});
+
+			const scrollWrapper = container.createDiv({
+				cls: "flashcard-scroll-wrapper",
+			});
+			// Fades
+			scrollWrapper.createDiv({ cls: "flashcard-fade-top" });
+			cardContainer = scrollWrapper.createDiv({
+				cls: "flashcard-card-container",
+			});
+			scrollWrapper.createDiv({ cls: "flashcard-fade-bottom" });
+
+			controlsContainer = container.createDiv({
+				cls: "flashcard-controls",
+			});
 		}
 
 		const currentCard = this.session.cards[this.session.currentIndex];
 		if (!currentCard) {
-			this.renderEmpty();
+			this.renderEmpty(container);
 			return;
 		}
 
-		// Progress bar
-		const progressContainer = container.createDiv({
-			cls: "flashcard-review-progress",
-		});
+		this.renderProgress(progressContainer);
+		this.renderCard(cardContainer, currentCard);
+		this.renderControls(controlsContainer, currentCard);
+
+		// Update tracking state
+		this.lastRenderedIndex = this.session.currentIndex;
+		this.lastRenderedSide = this.session.currentSide;
+		this.lastCardPath = currentCard.path;
+	}
+
+	private renderProgress(container: HTMLElement) {
+		if (!this.session) return;
+
+		container.empty();
+
 		const progress =
 			(this.session.currentIndex / this.session.cards.length) * 100;
-		const progressBar = progressContainer.createDiv({
+		const progressBar = container.createDiv({
 			cls: "flashcard-progress-bar",
 		});
 		progressBar.createDiv({
 			cls: "flashcard-progress-fill",
 		}).style.width = `${progress}%`;
-		progressContainer.createSpan({
+		container.createSpan({
 			text: `${this.session.currentIndex + 1} / ${this.session.cards.length}`,
 			cls: "flashcard-progress-text",
 		});
-		const menuButton = progressContainer.createDiv({
+		const menuButton = container.createDiv({
 			cls: "flashcard-review-menu",
 			attr: {
 				"aria-label": "More actions",
@@ -212,34 +269,28 @@ export class ReviewView extends ItemView {
 			);
 			menu.showAtMouseEvent(event);
 		});
+	}
 
-		// Card container
-		const cardContainer = container.createDiv({
-			cls: "flashcard-card-container",
-		});
-		const cardEl = cardContainer.createDiv({ cls: "flashcard-card" });
+	private renderCard(container: HTMLElement, currentCard: Flashcard) {
+		if (!this.session) return;
 
-		// Render sides based on setting
+		const isNewCard =
+			this.session.currentIndex !== this.lastRenderedIndex ||
+			currentCard.path !== this.lastCardPath;
+		const isNextSide =
+			!isNewCard && this.session.currentSide > this.lastRenderedSide;
 		const showOnlyCurrentSide = this.plugin.settings.showOnlyCurrentSide;
 
-		if (showOnlyCurrentSide) {
-			// Only show current side
-			const sideContent =
-				this.currentContent[this.session.currentSide] || "";
-			const renderTarget = cardEl.createDiv({
-				cls: "flashcard-card-content",
-			});
-			void MarkdownRenderer.render(
-				this.app,
-				sideContent,
-				renderTarget,
-				currentCard.path,
-				this,
-			);
-		} else {
-			// Show all sides up to and including the current side
-			for (let i = 0; i <= this.session.currentSide; i++) {
-				const sideContent = this.currentContent[i] || "";
+		let cardEl = container.querySelector(".flashcard-card") as HTMLElement;
+
+		if (isNewCard || showOnlyCurrentSide || !cardEl) {
+			// Full render
+			container.empty();
+			cardEl = container.createDiv({ cls: "flashcard-card" });
+
+			if (showOnlyCurrentSide) {
+				const sideContent =
+					this.currentContent[this.session.currentSide] || "";
 				const renderTarget = cardEl.createDiv({
 					cls: "flashcard-card-content",
 				});
@@ -250,20 +301,68 @@ export class ReviewView extends ItemView {
 					currentCard.path,
 					this,
 				);
+			} else {
+				for (let i = 0; i <= this.session.currentSide; i++) {
+					const sideContent = this.currentContent[i] || "";
+					const renderTarget = cardEl.createDiv({
+						cls: "flashcard-card-content",
+					});
+					void MarkdownRenderer.render(
+						this.app,
+						sideContent,
+						renderTarget,
+						currentCard.path,
+						this,
+					);
 
-				// Add separator between sides (but not after the last one)
-				if (i < this.session.currentSide) {
-					cardEl.createEl("hr", { cls: "flashcard-side-separator" });
+					if (i < this.session.currentSide) {
+						cardEl.createEl("hr", {
+							cls: "flashcard-side-separator",
+						});
+					}
 				}
 			}
+			// Reset scroll for new card content
+			container.scrollTop = 0;
+		} else if (isNextSide) {
+			// Incremental append
+			for (
+				let i = this.lastRenderedSide + 1;
+				i <= this.session.currentSide;
+				i++
+			) {
+				const sideContent = this.currentContent[i] || "";
+				
+				// Append separator before new content
+				cardEl.createEl("hr", { cls: "flashcard-side-separator" });
+				
+				const renderTarget = cardEl.createDiv({
+					cls: "flashcard-card-content",
+				});
+				void MarkdownRenderer.render(
+					this.app,
+					sideContent,
+					renderTarget,
+					currentCard.path,
+					this,
+				);
+			}
+
+			// Scroll down smoothly to show new content
+			setTimeout(() => {
+				container.scrollTo({
+					top: container.scrollHeight,
+					behavior: "smooth",
+				});
+			}, 0);
 		}
+	}
 
-		// Controls
-		const controlsContainer = container.createDiv({
-			cls: "flashcard-controls",
-		});
+	private renderControls(container: HTMLElement, currentCard: Flashcard) {
+		if (!this.session) return;
+		container.empty();
 
-		const actionsContainer = controlsContainer.createDiv({
+		const actionsContainer = container.createDiv({
 			cls: "flashcard-actions",
 		});
 
@@ -430,12 +529,11 @@ export class ReviewView extends ItemView {
 		}
 	}
 
-	private renderEmpty() {
-		const container = this.containerEl.children[1] as HTMLElement;
+	private renderEmpty(container: HTMLElement) {
 		if (!container) return;
-
 		container.empty();
 		container.addClass("flashcard-review");
+		container.addClass("flashcard-empty-state-container");
 
 		const emptyState = container.createDiv({
 			cls: "flashcard-empty-state",
@@ -475,3 +573,4 @@ export class ReviewView extends ItemView {
 		this.session = null;
 	}
 }
+

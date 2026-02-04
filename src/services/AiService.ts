@@ -507,9 +507,9 @@ export class AiService {
 		const buffer =
 			data.buffer instanceof ArrayBuffer
 				? data.buffer.slice(
-					data.byteOffset,
-					data.byteOffset + data.byteLength,
-				)
+						data.byteOffset,
+						data.byteOffset + data.byteLength,
+					)
 				: new Uint8Array(data).buffer;
 		await this.app.vault.createBinary(filePath, buffer);
 
