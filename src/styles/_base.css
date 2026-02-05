@@ -85,6 +85,7 @@ display: inline-flex;
 align-items: center;
 justify-content: center;
 gap: var(--size-2-1);
+flex: 1 1 300px;
 }
 
 /* Remove margin when inside sticky header */

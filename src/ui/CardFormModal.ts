@@ -346,14 +346,19 @@ export class CardFormModal extends Modal {
 			cls: "flashcard-modal-header-row",
 		});
 
-		headerRow.createSpan({
+		// Group 1: New/Edit + Template
+		const groupTemplate = headerRow.createDiv({
+			cls: "flashcard-header-group",
+		});
+
+		groupTemplate.createSpan({
 			text: isEditMode ? "Edit " : "New ",
 			cls: "flashcard-modal-header-text",
 		});
 
 		// Template selector
 		this.createInlineDropdown(
-			headerRow,
+			groupTemplate,
 			this.availableTemplates.map((t) => ({
 				label: t.name,
 				value: t.path,
@@ -374,13 +379,18 @@ export class CardFormModal extends Modal {
 			},
 		);
 
-		headerRow.createSpan({
+		// Group 2: Card in + Deck
+		const groupDeck = headerRow.createDiv({
+			cls: "flashcard-header-group",
+		});
+
+		groupDeck.createSpan({
 			text: " Card in ",
 			cls: "flashcard-modal-header-text",
 		});
 
 		// Deck selector - search input with suggestions
-		const deckInput = new TextComponent(headerRow);
+		const deckInput = new TextComponent(groupDeck);
 		deckInput.inputEl.addClass("flashcard-inline-search");
 		deckInput.setPlaceholder("Search folders...");
 		deckInput.setValue(this.currentDeckPath);

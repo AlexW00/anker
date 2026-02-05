@@ -5,7 +5,6 @@
 .flashcard-card-modal {
 display: flex;
 flex-direction: column;
-min-width: 500px;
 max-height: 55vh;
 padding: 0 !important;
 overflow: hidden;
@@ -46,6 +45,7 @@ margin-bottom: var(--size-4-2);
    -------------------------------------------------------------------------- */
 .flashcard-field-row {
 display: flex;
+flex-wrap: wrap;
 align-items: flex-start;
 gap: var(--size-4-3);
 margin-bottom: var(--size-4-3);
@@ -53,15 +53,16 @@ margin-bottom: var(--size-4-3);
 
 .flashcard-field-label-inline {
 flex-shrink: 0;
-width: 80px;
+width: 100px;
 font-weight: var(--font-medium);
 color: var(--text-muted);
 padding-top: var(--size-4-2);
-text-align: right;
+text-align: left;
+white-space: nowrap;
 }
 
 .flashcard-textarea-container {
-flex: 1;
+flex: 1 1 300px;
 position: relative;
 }
 
