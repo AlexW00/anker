@@ -55,6 +55,10 @@ display: flex;
 align-items: center;
 gap: var(--size-4-3);
 flex: 1;
+min-width: 0;
+overflow: hidden;
+mask-image: linear-gradient(to right, black calc(100% - 40px), transparent);
+-webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), transparent);
 }
 
 .flashcard-deck-name {
@@ -62,6 +66,7 @@ display: flex;
 align-items: center;
 gap: var(--size-4-1);
 font-weight: var(--font-medium);
+white-space: nowrap;
 }
 
 .flashcard-deck-toggle {
@@ -115,6 +120,7 @@ font-size: var(--font-ui-smaller);
 font-weight: var(--font-medium);
 background-color: var(--background-primary-alt);
 border: 1px solid var(--background-modifier-border);
+white-space: nowrap;
 }
 
 .flashcard-stat-clickable {
@@ -164,6 +170,7 @@ text-decoration: underline;
 .flashcard-deck-actions {
 display: flex;
 gap: var(--size-4-2);
+flex-shrink: 0;
 }
 
 /* --------------------------------------------------------------------------
