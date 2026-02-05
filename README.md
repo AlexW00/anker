@@ -130,12 +130,12 @@ Paris
 
 ### Data storage
 
-| Data | Location |
-| --- | --- |
-| Card content & scheduling | Markdown files (frontmatter) |
-| Plugin settings | `.obsidian/plugins/anker/data.json` |
+| Data                              | Location                                       |
+| --------------------------------- | ---------------------------------------------- |
+| Card content & scheduling         | Markdown files (frontmatter)                   |
+| Plugin settings                   | `.obsidian/plugins/anker/data.json`            |
 | Review history (for optimization) | `.obsidian/plugins/anker/review-history.jsonl` |
-| API keys | Obsidian SecretStorage |
+| API keys                          | Obsidian SecretStorage                         |
 
 Review history is stored outside of card files so frontmatter stays clean. It can be reset from Settings → Scheduling.
 
@@ -221,7 +221,6 @@ OBSIDIAN_PASSWORD=your-password
 
 **CI/CD (GitHub Actions):**
 Add `OBSIDIAN_EMAIL` and `OBSIDIAN_PASSWORD` as **Repository Secrets** in your GitHub repository settings.
-
 
 ## License
 

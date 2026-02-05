@@ -367,7 +367,7 @@ describe("TemplateRenderingLogic Integration Tests", () => {
 
 			const rendered = renderSync(nunjucksEnv, body, fields);
 
-			expect(rendered).toContain("*Source: Wikipedia*");
+			expect(rendered).toContain("_Source: Wikipedia_");
 			expect(rendered).not.toContain("> **Notes:**");
 		});
 

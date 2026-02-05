@@ -35,13 +35,20 @@ export class FsrsOptimizerService {
 
 	/**
 	 * Initialize the WASM module. Must be called before optimization.
+	 *
+	 * @param wasmInput - Optional WASM module/buffer for environments where
+	 *   the default browser-based loading (fetch + import.meta.url) is
+	 *   unavailable (e.g. Node.js tests). When omitted, the module
+	 *   locates the .wasm file relative to its own URL.
 	 */
-	async initialize(): Promise<void> {
+	async initialize(
+		wasmInput?: BufferSource | WebAssembly.Module,
+	): Promise<void> {
 		if (this.initialized) return;
 
 		try {
 			const fsrsBrowser = await import("fsrs-browser/fsrs_browser");
-			await fsrsBrowser.default();
+			await fsrsBrowser.default(wasmInput);
 			this.FsrsClass = fsrsBrowser.Fsrs;
 			this.ProgressClass = fsrsBrowser.Progress;
 			this.initialized = true;
@@ -90,28 +97,26 @@ export class FsrsOptimizerService {
 		const fsrs = new this.FsrsClass!();
 		const progress = this.ProgressClass!.new();
 
-		try {
-			// Run optimization
-			const parameters = fsrs.computeParameters(
-				new Uint32Array(ratings),
-				new Uint32Array(deltaDays),
-				new Uint32Array(lengths),
-				progress,
-				enableShortTerm,
-			);
+		// Run optimization
+		// Note: computeParameters takes ownership of the Fsrs instance
+		// (Rust `mut self`), so the JS wrapper calls __destroy_into_raw()
+		// internally. Do NOT call fsrs.free() afterward.
+		const parameters = fsrs.computeParameters(
+			new Uint32Array(ratings),
+			new Uint32Array(deltaDays),
+			new Uint32Array(lengths),
+			progress,
+			enableShortTerm,
+		);
 
-			// Convert Float32Array to regular number array
-			const weights = Array.from(parameters);
+		// Convert Float32Array to regular number array
+		const weights = Array.from(parameters);
 
-			return {
-				weights,
-				cardsUsed,
-				reviewsUsed,
-			};
-		} finally {
-			// Clean up WASM resources
-			fsrs.free();
-		}
+		return {
+			weights,
+			cardsUsed,
+			reviewsUsed,
+		};
 	}
 
 	/**

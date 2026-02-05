@@ -152,7 +152,7 @@ export class ReviewLogStore {
 				if (!this.data[parsed.cardPath]) {
 					this.data[parsed.cardPath] = [];
 				}
-				this.data[parsed.cardPath].push(parsed.entry);
+				this.data[parsed.cardPath]!.push(parsed.entry);
 			} catch {
 				// Skip malformed lines to avoid failing the whole load.
 				continue;

@@ -26,9 +26,7 @@ describe("Review Session", function () {
 		const promptInput = browser.$(".prompt-input");
 		if (!(await promptInput.isExisting())) return;
 
-		const suggestion = browser.$(
-			".suggestion-container .suggestion-item",
-		);
+		const suggestion = browser.$(".suggestion-container .suggestion-item");
 		try {
 			await suggestion.waitForExist({ timeout: 5000 });
 		} catch {

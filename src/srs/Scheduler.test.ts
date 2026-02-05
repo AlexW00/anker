@@ -278,7 +278,9 @@ describe("Scheduler", () => {
 
 			const result = scheduler.review(state, Rating.Good);
 			// With short-term scheduling enabled, Good on New goes to Learning
-			expect([State.Learning, State.Review]).toContain(result.state.state);
+			expect([State.Learning, State.Review]).toContain(
+				result.state.state,
+			);
 		});
 
 		it("Learning -> Review (after graduating)", () => {
