@@ -1,3 +1,8 @@
+export type DueCard = {
+	path: string;
+	id?: string;
+};
+
 export type AnkerPluginLike = {
 	settings: {
 		templateFolder: string;
@@ -7,6 +12,9 @@ export type AnkerPluginLike = {
 	};
 	saveSettings: () => Promise<void>;
 	startReview?: (deckPath: string) => void | Promise<void>;
+	deckService?: {
+		getDueCards: (deckPath: string) => DueCard[];
+	};
 };
 
 export type ObsidianAppLike = {

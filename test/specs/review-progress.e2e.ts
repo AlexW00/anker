@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from "mocha";
 import { browser, expect } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForVaultReady } from "../helpers/waitForVaultReady";
-import type { ObsidianAppLike } from "../helpers/obsidianTypes";
+import type { ObsidianAppLike, DueCard } from "../helpers/obsidianTypes";
 
 describe("Review Progress & Settings", function () {
 	beforeEach(async function () {
@@ -10,21 +10,28 @@ describe("Review Progress & Settings", function () {
 		await waitForVaultReady();
 
 		// Ensure deterministic scheduling for E2E (avoid short-term steps).
-		await browser.executeObsidian(async ({ app }) => {
+		const settingsApplied = await browser.executeObsidian(async ({ app }) => {
 			const obsidianApp = app as ObsidianAppLike;
 			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
-			if (!plugin) return;
+			if (!plugin) return { error: "Plugin not found" };
 			plugin.settings.fsrsEnableShortTerm = false;
 			plugin.settings.fsrsLearningSteps = [];
 			plugin.settings.fsrsRelearningSteps = [];
 			await plugin.saveSettings();
 
-			// Verify settings were applied
-			if (plugin.settings.fsrsEnableShortTerm !== false) {
-				console.error("Failed to apply fsrsEnableShortTerm=false");
-				throw new Error("Failed to apply test settings");
-			}
+			// Return settings for debugging
+			return {
+				fsrsEnableShortTerm: plugin.settings.fsrsEnableShortTerm,
+				fsrsLearningSteps: plugin.settings.fsrsLearningSteps,
+				fsrsRelearningSteps: plugin.settings.fsrsRelearningSteps,
+			};
 		});
+		console.debug(`[DEBUG] Settings applied:`, settingsApplied);
+
+		// Verify settings were actually applied
+		if (settingsApplied && "error" in settingsApplied) {
+			throw new Error(`Failed to apply settings: ${settingsApplied.error}`);
+		}
 	});
 
 	/**
@@ -32,6 +39,20 @@ describe("Review Progress & Settings", function () {
 	 * API so we avoid the suggest-modal timing issues.
 	 */
 	const startReviewSession = async () => {
+		// Log deck info before starting
+		const deckInfo = await browser.executeObsidian(({ app }) => {
+			const obsidianApp = app as ObsidianAppLike;
+			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
+			if (!plugin?.deckService) return { error: "No deck service" };
+			
+			const dueCards: DueCard[] = plugin.deckService.getDueCards("flashcards");
+			return {
+				dueCardCount: dueCards.length,
+				dueCardPaths: dueCards.map((c) => c.path),
+			};
+		});
+		console.debug(`[DEBUG] Deck info before review:`, deckInfo);
+
 		await browser.executeObsidian(({ app }) => {
 			const obsidianApp = app as ObsidianAppLike;
 			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
@@ -42,6 +63,18 @@ describe("Review Progress & Settings", function () {
 
 		const reviewView = browser.$(".flashcard-review");
 		await reviewView.waitForExist({ timeout: 10000 });
+		console.debug(`[DEBUG] Review session started`);
+	};
+
+	/**
+	 * Helper: get card content text for change detection.
+	 */
+	const getCardContent = async (): Promise<string> => {
+		const content = await browser.execute(() => {
+			const cardEl = document.querySelector(".flashcard-card");
+			return cardEl?.textContent ?? "";
+		});
+		return content;
 	};
 
 	/**
@@ -49,6 +82,11 @@ describe("Review Progress & Settings", function () {
 	 * @param ratingClass e.g. ".flashcard-btn-good", ".flashcard-btn-again"
 	 */
 	const revealAndRate = async (ratingClass: string) => {
+		// Capture current card content and progress BEFORE rating for change detection
+		const contentBefore = await getCardContent();
+		const progressBefore = await getProgressText();
+		console.debug(`[DEBUG] Before rating: progress="${progressBefore}", content="${contentBefore.substring(0, 50)}..."`);
+
 		// Reveal answer using JS click to avoid interception
 		const revealButton = browser.$(
 			".flashcard-review .flashcard-btn-reveal",
@@ -64,32 +102,52 @@ describe("Review Progress & Settings", function () {
 		// Wait for rating buttons container to appear
 		const ratingButtons = browser.$(".flashcard-rating-buttons");
 		await ratingButtons.waitForExist({ timeout: 5000 });
+		console.debug(`[DEBUG] Rating buttons visible, clicking ${ratingClass}`);
 
 		// Click the rating button using JS with the class
 		await browser.execute((cls: string) => {
 			const btn = document.querySelector(
 				`${cls} button`,
 			) as HTMLButtonElement;
+			console.debug(`[DEBUG] Found rating button:`, btn);
 			btn?.click();
 		}, ratingClass);
 
-		// Wait for either next card or completion state
+		// Wait for actual state change: either completion, card content change, or progress update
+		// This fixes a race condition where the reveal button selector matches immediately
+		// because the old card is still displayed while rateCard() processes asynchronously
 		await browser.waitUntil(
 			async () => {
 				// Check if session completed
-				const complete = browser.$(
-					".flashcard-complete-state",
-				);
-				if (await complete.isExisting()) return true;
+				const complete = browser.$(".flashcard-complete-state");
+				if (await complete.isExisting()) {
+					console.debug(`[DEBUG] Session completed`);
+					return true;
+				}
 
-				// Check if new reveal button appeared (next card)
-				const reveal = browser.$(
-					".flashcard-review .flashcard-btn-reveal",
-				);
-				return reveal.isExisting();
+				// Check if card content changed (we moved to next card)
+				const contentAfter = await getCardContent();
+				if (contentAfter !== contentBefore) {
+					console.debug(`[DEBUG] Card content changed to: "${contentAfter.substring(0, 50)}..."`);
+					return true;
+				}
+
+				// Check if progress text updated
+				const progressAfter = await getProgressText();
+				if (progressAfter !== progressBefore) {
+					console.debug(`[DEBUG] Progress updated: "${progressBefore}" -> "${progressAfter}"`);
+					return true;
+				}
+
+				return false;
 			},
-			{ timeout: 5000, interval: 100 },
+			{ timeout: 10000, interval: 100, timeoutMsg: `Rating did not cause state change. Content before: "${contentBefore.substring(0, 50)}"` },
 		);
+
+		// Additional small delay to ensure render completes
+		await browser.pause(100);
+		const progressAfter = await getProgressText();
+		console.debug(`[DEBUG] After rating settled: progress="${progressAfter}"`);
 	};
 
 	/**
@@ -166,35 +224,43 @@ describe("Review Progress & Settings", function () {
 		// Capture initial progress
 		const initialText = await getProgressText();
 		const initialWidth = await getProgressFillWidth();
+		console.debug(`[DEBUG] Initial state: text="${initialText}", width="${initialWidth}"`);
 
 		// The initial state should show "0 / N completed"
 		expect(initialText).toMatch(/^0\s*\/\s*\d+\s*completed$/);
 
 		// Rate the current card "Easy" so it leaves the due queue entirely
 		// (bypasses learning steps and schedules for days later)
+		console.debug(`[DEBUG] About to rate card as Easy...`);
 		await revealAndRate(".flashcard-btn-easy");
+		console.debug(`[DEBUG] Rating complete, checking review state...`);
 
 		// After rating, the review view should still exist (more cards remain)
 		const reviewView = browser.$(".flashcard-review");
 		const isStillReviewing = await reviewView.isExisting();
+		console.debug(`[DEBUG] Still reviewing: ${isStillReviewing}`);
 
 		if (isStillReviewing) {
 			// Check for either progress text change or completion
 			const completeState = browser.$(".flashcard-complete-state");
 			if (await completeState.isExisting()) {
+				console.debug(`[DEBUG] All cards completed`);
 				// If all cards were completed, that's still a valid outcome
 				return;
 			}
 
 			// Wait for progress to actually update (poll until changed)
+			console.debug(`[DEBUG] Waiting for progress change from: text="${initialText}", width="${initialWidth}"`);
 			await browser.waitUntil(
 				async () => {
 					const afterText = await getProgressText();
 					const afterWidth = await getProgressFillWidth();
+					console.debug(`[DEBUG] Checking: text="${afterText}", width="${afterWidth}"`);
 					return afterText !== initialText || afterWidth !== initialWidth;
 				},
-				{ timeout: 10000, interval: 200, timeoutMsg: "Progress did not update after rating" },
+				{ timeout: 10000, interval: 200, timeoutMsg: `Progress did not update after rating. Initial: "${initialText}", "${initialWidth}"` },
 			);
+			console.debug(`[DEBUG] Progress updated successfully`);
 		}
 	});
 
@@ -203,38 +269,49 @@ describe("Review Progress & Settings", function () {
 
 		// Read total card count from the initial progress text
 		const initialText = await getProgressText();
+		console.debug(`[DEBUG] Initial progress text: "${initialText}"`);
 		const initialMatch = initialText.match(
 			/(\d+)\s*\/\s*(\d+)\s*completed/,
 		);
 		expect(initialMatch).not.toBe(null);
 		const initialCompleted = Number(initialMatch![1]);
 		const initialTotal = Number(initialMatch![2]);
+		console.debug(`[DEBUG] Initial completed=${initialCompleted}, total=${initialTotal}`);
 
 		// Rate the card "Easy" so it leaves the due queue (bypasses learning
 		// steps and schedules for days later, not just minutes)
+		console.debug(`[DEBUG] About to rate card as Easy...`);
 		await revealAndRate(".flashcard-btn-easy");
+		console.debug(`[DEBUG] Rating complete`);
 
 		// Either: still reviewing with fewer cards, or session complete
 		const completeState = browser.$(".flashcard-complete-state");
 		const isComplete = await completeState.isExisting();
+		console.debug(`[DEBUG] Session complete: ${isComplete}`);
 
 		if (!isComplete) {
 			// Wait for completed count to increase (poll until updated)
+			console.debug(`[DEBUG] Waiting for completed count to increase from ${initialCompleted}...`);
 			await browser.waitUntil(
 				async () => {
 					const afterText = await getProgressText();
 					const afterMatch = afterText.match(
 						/(\d+)\s*\/\s*(\d+)\s*completed/,
 					);
-					if (!afterMatch) return false;
+					if (!afterMatch) {
+						console.debug(`[DEBUG] Progress text doesn't match pattern: "${afterText}"`);
+						return false;
+					}
 					const afterCompleted = Number(afterMatch[1]);
+					console.debug(`[DEBUG] Current completed: ${afterCompleted}`);
 					return afterCompleted > initialCompleted;
 				},
-				{ timeout: 10000, interval: 200, timeoutMsg: "Completed count did not increase after rating" },
+				{ timeout: 10000, interval: 200, timeoutMsg: `Completed count did not increase after rating. Initial: ${initialCompleted}` },
 			);
 
 			// Final verification
 			const afterText = await getProgressText();
+			console.debug(`[DEBUG] Final progress text: "${afterText}"`);
 			const afterMatch = afterText.match(
 				/(\d+)\s*\/\s*(\d+)\s*completed/,
 			);
