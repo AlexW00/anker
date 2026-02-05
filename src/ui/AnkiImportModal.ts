@@ -7,6 +7,11 @@ import {
 	Setting,
 	prepareFuzzySearch,
 } from "obsidian";
+import {
+	ButtonRowComponent,
+	ProgressBarComponent,
+	SelectableListComponent,
+} from "./components";
 import type {
 	AnkiDeckSelection,
 	AnkiPackageData,
@@ -102,12 +107,11 @@ export class AnkiImportModal extends Modal {
 	private destinationFolder: string;
 	private folderSuggest: FolderPathSuggest | null = null;
 
-	// UI elements for progress
+	// UI components
 	private deckListContainer: HTMLElement | null = null;
-	private progressContainer: HTMLElement | null = null;
-	private progressBar: HTMLElement | null = null;
-	private progressText: HTMLElement | null = null;
-	private importButton: ButtonComponent | null = null;
+	private progressBar: ProgressBarComponent | null = null;
+	private buttonRow: ButtonRowComponent | null = null;
+	private selectableList: SelectableListComponent<AnkiDeckSelection> | null = null;
 
 	constructor(
 		app: App,
@@ -148,41 +152,20 @@ export class AnkiImportModal extends Modal {
 		this.renderFolderSelector(contentEl);
 
 		// Progress bar (hidden initially)
-		this.progressContainer = contentEl.createDiv({
-			cls: "anki-import-progress",
-		});
-		this.progressContainer.addClass("anki-import-progress-hidden");
-
-		const progressBar = this.progressContainer.createDiv({
-			cls: "flashcard-progress-bar",
-		});
-		this.progressBar = progressBar.createDiv({
-			cls: "flashcard-progress-fill",
-		});
-		this.progressText = this.progressContainer.createDiv({
-			cls: "flashcard-progress-text",
+		this.progressBar = new ProgressBarComponent(contentEl, {
+			containerClass: "anki-import-progress",
 		});
 
 		// Button row
-		const buttonRow = contentEl.createDiv({
-			cls: "flashcard-modal-buttons-v2",
+		this.buttonRow = new ButtonRowComponent(contentEl, {
+			cancelText: "Cancel",
+			onCancel: () => this.close(),
+			submitText: "Import",
+			onSubmit: () => {
+				void this.handleImport();
+			},
+			submitDisabled: true,
 		});
-
-		const leftButtons = buttonRow.createDiv({
-			cls: "flashcard-buttons-left",
-		});
-		new ButtonComponent(leftButtons)
-			.setButtonText("Cancel")
-			.onClick(() => this.close());
-
-		const rightButtons = buttonRow.createDiv({
-			cls: "flashcard-buttons-right",
-		});
-		this.importButton = new ButtonComponent(rightButtons)
-			.setButtonText("Import")
-			.setCta()
-			.setDisabled(true)
-			.onClick(() => this.handleImport());
 	}
 
 	onClose() {
@@ -336,7 +319,7 @@ export class AnkiImportModal extends Modal {
 	}
 
 	/**
-	 * Render the deck selection list.
+	 * Render the deck selection list using SelectableListComponent.
 	 */
 	private renderDeckList(): void {
 		if (!this.deckListContainer) return;
@@ -350,90 +333,45 @@ export class AnkiImportModal extends Modal {
 			return;
 		}
 
-		// Select all / Deselect all controls
-		const controlRow = this.deckListContainer.createDiv({
-			cls: "anki-import-controls",
-		});
-
-		new ButtonComponent(controlRow)
-			.setButtonText("Select all")
-			.onClick(() => {
-				for (const sel of this.deckSelections) {
-					sel.selected = true;
-				}
-				this.renderDeckList();
-				this.updateImportButton();
-			});
-
-		new ButtonComponent(controlRow)
-			.setButtonText("Deselect all")
-			.onClick(() => {
-				for (const sel of this.deckSelections) {
-					sel.selected = false;
-				}
-				this.renderDeckList();
-				this.updateImportButton();
-			});
-
-		// Deck list
-		const listEl = this.deckListContainer.createDiv({
-			cls: "anki-import-decks",
-		});
-
-		for (const selection of this.deckSelections) {
-			const deckRow = listEl.createDiv({ cls: "anki-import-deck-row" });
-
-			// Indent based on depth
-			deckRow.style.paddingLeft = `${selection.depth * 20}px`;
-
-			// Checkbox
-			const checkbox = document.createElement("input");
-			checkbox.type = "checkbox";
-			checkbox.className = "anki-import-checkbox";
-			checkbox.checked = selection.selected;
-			checkbox.addEventListener("change", () => {
-				selection.selected = checkbox.checked;
-				this.updateImportButton();
-			});
-			deckRow.appendChild(checkbox);
-
-			// Deck name (display only the last part for nested decks)
-			const nameParts = selection.deck.name.split("::");
-			const displayName =
-				nameParts[nameParts.length - 1] ?? selection.deck.name;
-
-			deckRow.createSpan({
-				text: displayName,
-				cls: "anki-import-deck-name",
-			});
-
-			// Note count
-			deckRow.createSpan({
-				text: `(${selection.noteCount} cards)`,
-				cls: "anki-import-deck-count",
-			});
-		}
+		this.selectableList = new SelectableListComponent(
+			this.deckListContainer,
+			{
+				items: this.deckSelections,
+				getDisplayName: (sel) => {
+					// Display only the last part for nested decks
+					const nameParts = sel.deck.name.split("::");
+					return nameParts[nameParts.length - 1] ?? sel.deck.name;
+				},
+				getSecondaryText: (sel) => `(${sel.noteCount} cards)`,
+				onSelectionChange: () => this.updateImportButton(),
+				initiallySelected: true,
+				containerClass: "anki-import-decks",
+				showCount: false,
+			},
+		);
 	}
 
 	/**
 	 * Update the import button state based on selection.
 	 */
 	private updateImportButton(): void {
-		const hasSelection = this.deckSelections.some((s) => s.selected);
-		this.importButton?.setDisabled(!hasSelection);
+		const hasSelection = this.selectableList
+			? this.selectableList.getSelectedCount() > 0
+			: false;
+		this.buttonRow?.setSubmitDisabled(!hasSelection);
 	}
 
 	/**
 	 * Handle the import button click.
 	 */
 	private async handleImport(): Promise<void> {
-		if (!this.packageData || !this.selectedFile) return;
+		if (!this.packageData || !this.selectedFile || !this.selectableList)
+			return;
 
+		const selectedItems = this.selectableList.getSelectedItems();
 		const selectedDeckIds = new Set<number>();
-		for (const selection of this.deckSelections) {
-			if (selection.selected) {
-				selectedDeckIds.add(selection.deck.id);
-			}
+		for (const selection of selectedItems) {
+			selectedDeckIds.add(selection.deck.id);
 		}
 
 		if (selectedDeckIds.size === 0) {
@@ -459,10 +397,8 @@ export class AnkiImportModal extends Modal {
 		}
 
 		// Show progress
-		if (this.progressContainer) {
-			this.progressContainer.removeClass("anki-import-progress-hidden");
-		}
-		this.importButton?.setDisabled(true);
+		this.progressBar?.show();
+		this.buttonRow?.setSubmitDisabled(true);
 
 		try {
 			const result = await this.importService.importDecks(
@@ -471,7 +407,7 @@ export class AnkiImportModal extends Modal {
 				selectedDeckIds,
 				this.destinationFolder,
 				(current, total, message) => {
-					this.updateProgress(current, total, message);
+					this.progressBar?.setProgress(current, total, message);
 				},
 				overwriteTemplates,
 			);
@@ -479,7 +415,7 @@ export class AnkiImportModal extends Modal {
 			this.showResult(result);
 		} catch (error) {
 			new Notice(`Import failed: ${(error as Error).message}`);
-			this.importButton?.setDisabled(false);
+			this.buttonRow?.setSubmitDisabled(false);
 		}
 	}
 
@@ -498,7 +434,7 @@ export class AnkiImportModal extends Modal {
 				});
 
 				const buttonRow = contentEl.createDiv({
-					cls: "flashcard-modal-buttons-v2",
+					cls: "flashcard-modal-buttons",
 				});
 				const leftButtons = buttonRow.createDiv({
 					cls: "flashcard-buttons-left",
@@ -550,23 +486,6 @@ export class AnkiImportModal extends Modal {
 			`${list}${more}.\n\n` +
 			"Importing will overwrite those templates with the converted Anki versions. Continue?"
 		);
-	}
-
-	/**
-	 * Update the progress bar.
-	 */
-	private updateProgress(
-		current: number,
-		total: number,
-		message: string,
-	): void {
-		if (this.progressBar) {
-			const percent = total > 0 ? (current / total) * 100 : 0;
-			this.progressBar.style.width = `${percent}%`;
-		}
-		if (this.progressText) {
-			this.progressText.textContent = message;
-		}
 	}
 
 	/**

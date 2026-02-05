@@ -1,5 +1,6 @@
 import { App, Modal } from "obsidian";
 import type { TFile } from "obsidian";
+import { FileListComponent } from "./components";
 
 /**
  * Represents a failed card with its file and error message.
@@ -34,44 +35,34 @@ export class FailedCardsModal extends Modal {
 			text: `The following ${this.failedCards.length} card${this.failedCards.length === 1 ? "" : "s"} failed to regenerate. Click to view the error in the note's frontmatter.`,
 		});
 
-		const list = contentEl.createEl("ul", {
-			cls: "flashcard-failed-list",
-		});
-
-		for (const { file, error, path } of this.failedCards) {
-			const item = list.createEl("li");
-			
-			// Get display name from file or path
+		// Convert failed cards to FileListItem format
+		const items = this.failedCards.map(({ file, error, path }) => {
 			const displayName = file
 				? file.basename
 				: (path?.split("/").pop()?.replace(/\.md$/, "") ?? "Unknown");
 
-			if (file) {
-				const link = item.createEl("a", {
-					text: displayName,
-					cls: "flashcard-failed-link",
-					href: "#",
-				});
-				link.addEventListener("click", (event) => {
-					event.preventDefault();
-					this.close();
-					void this.app.workspace.getLeaf().openFile(file);
-				});
-			} else {
-				item.createSpan({
-					text: displayName,
-					cls: "flashcard-failed-name",
-				});
-			}
-
-			// Show truncated error as hint
+			// Truncate error for display
 			const truncatedError =
 				error.length > 80 ? error.slice(0, 77) + "..." : error;
-			item.createSpan({
-				text: ` — ${truncatedError}`,
-				cls: "flashcard-failed-error-hint",
-			});
-		}
+
+			return {
+				file,
+				displayName,
+				secondaryText: truncatedError,
+				path,
+			};
+		});
+
+		new FileListComponent(
+			this.app,
+			contentEl,
+			{
+				items,
+				containerClass: "flashcard-failed-list",
+				closeModalOnClick: true,
+			},
+			() => this.close(),
+		);
 	}
 
 	onClose() {

@@ -13,6 +13,7 @@ import type { Deck, FlashcardTemplate } from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
+import { StatusTextComponent } from "./components";
 
 /**
  * MIME type accept strings for all media types combined.
@@ -183,7 +184,7 @@ export class CardFormModal extends Modal {
 	private cancelButton: ButtonComponent | null = null;
 	private createAnotherCheckbox: HTMLInputElement | null = null;
 	private cacheCheckbox: HTMLInputElement | null = null;
-	private statusTextEl: HTMLElement | null = null;
+	private statusText: StatusTextComponent | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
 	constructor(options: CardFormModalOptions) {
@@ -463,7 +464,7 @@ export class CardFormModal extends Modal {
 
 		// Buttons row
 		const buttonRow = footerContainer.createDiv({
-			cls: "flashcard-modal-buttons-row",
+			cls: "flashcard-modal-buttons",
 		});
 
 		// Cancel button (left side)
@@ -481,7 +482,7 @@ export class CardFormModal extends Modal {
 
 		if (!isEditMode) {
 			const createAnotherLabel = rightButtons.createEl("label", {
-				cls: "flashcard-create-another-toggle",
+				cls: "flashcard-checkbox-toggle",
 				attr: {
 					title: "Keep this dialog open after creating a card",
 				},
@@ -500,7 +501,7 @@ export class CardFormModal extends Modal {
 		if (isEditMode) {
 			// Cache AI results checkbox for edit mode
 			const cacheLabel = rightButtons.createEl("label", {
-				cls: "flashcard-create-another-toggle",
+				cls: "flashcard-checkbox-toggle",
 				attr: {
 					title: "When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
 				},
@@ -525,9 +526,7 @@ export class CardFormModal extends Modal {
 			});
 
 		// Status text (shown below buttons during submission)
-		this.statusTextEl = footerContainer.createDiv({
-			cls: "flashcard-modal-status-text",
-		});
+		this.statusText = new StatusTextComponent(footerContainer);
 
 		// Focus first field
 		const firstInput = contentEl.querySelector("textarea");
@@ -612,9 +611,10 @@ export class CardFormModal extends Modal {
 	 * Update the status text shown during submission.
 	 */
 	private setStatusText(status: string): void {
-		if (this.statusTextEl) {
-			this.statusTextEl.textContent = status;
-			this.statusTextEl.toggleClass("is-visible", status.length > 0);
+		if (status) {
+			this.statusText?.setText(status);
+		} else {
+			this.statusText?.clear();
 		}
 	}
 
