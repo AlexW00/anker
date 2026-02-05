@@ -308,7 +308,7 @@ export class AiService {
 				prompt,
 				systemPrompt ?? "",
 			);
-			const cached = this.cacheService.get(context.cardPath, cacheKey);
+			const cached = await this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
 				return cached;
 			}
@@ -374,7 +374,7 @@ export class AiService {
 				pipeType,
 				prompt,
 			);
-			const cached = this.cacheService.get(context.cardPath, cacheKey);
+			const cached = await this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
 				return cached;
 			}
@@ -445,7 +445,7 @@ export class AiService {
 				pipeType,
 				text,
 			);
-			const cached = this.cacheService.get(context.cardPath, cacheKey);
+			const cached = await this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
 				return cached;
 			}

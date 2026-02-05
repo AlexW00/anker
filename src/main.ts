@@ -349,6 +349,12 @@ export default class AnkerPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "open-template",
+			name: "Open template",
+			callback: () => this.openTemplate(),
+		});
+
+		this.addCommand({
 			id: "regenerate-all-from-template",
 			name: "Regenerate all cards from template",
 			callback: () => this.selectTemplateForRegeneration(),
@@ -541,6 +547,37 @@ export default class AnkerPlugin extends Plugin {
 					new Notice(`Failed to create template: ${error.message}`);
 				});
 		}).open();
+	}
+
+	/**
+	 * Open a template by selecting from available templates.
+	 */
+	private openTemplate(): void {
+		void this.templateService
+			.getTemplates(this.settings.templateFolder)
+			.then((templates) => {
+				if (templates.length === 0) {
+					new Notice(
+						`No templates found in "${this.settings.templateFolder}".`,
+					);
+					return;
+				}
+
+				new TemplateSelectorModal(
+					this.app,
+					templates,
+					(template) => {
+						const file = this.app.vault.getAbstractFileByPath(
+							template.path,
+						);
+						if (!(file instanceof TFile)) {
+							new Notice("Template file not found");
+							return;
+						}
+						void this.app.workspace.getLeaf().openFile(file);
+					},
+				).open();
+			});
 	}
 
 	/**

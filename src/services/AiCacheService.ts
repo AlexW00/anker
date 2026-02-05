@@ -1,4 +1,4 @@
-import { App, TFile, stringifyYaml } from "obsidian";
+import { App, TFile, stringifyYaml, parseYaml } from "obsidian";
 import type { FlashcardFrontmatter } from "../types";
 
 /**
@@ -38,26 +38,50 @@ export class AiCacheService {
 
 	/**
 	 * Get a cached entry from a card's frontmatter.
+	 * Reads file content directly to avoid stale metadata cache.
 	 * @param cardPath Path to the flashcard file
 	 * @param key Cache key (hash)
 	 * @returns The cached output or null if not found
 	 */
-	get(cardPath: string, key: string): string | null {
+	async get(cardPath: string, key: string): Promise<string | null> {
 		// First check pending writes from current render
 		const pending = this.pendingWrites.get(key);
 		if (pending) {
 			return pending;
 		}
 
-		// Then check persisted frontmatter cache
+		// Read file content directly (not metadata cache) to get fresh frontmatter
 		const file = this.app.vault.getAbstractFileByPath(cardPath);
 		if (!(file instanceof TFile)) {
 			return null;
 		}
 
-		const cache = this.app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
-		return fm?._cache?.[key] ?? null;
+		try {
+			const content = await this.app.vault.read(file);
+			const fm = this.parseFrontmatter(content);
+			return fm?._cache?.[key] ?? null;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * Parse frontmatter from file content.
+	 */
+	private parseFrontmatter(content: string): FlashcardFrontmatter | null {
+		const fmMatch = content.match(
+			/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n[\s\S]*)?$/,
+		);
+		if (!fmMatch) {
+			return null;
+		}
+
+		const yamlContent = fmMatch[1] ?? "";
+		try {
+			return parseYaml(yamlContent) as FlashcardFrontmatter;
+		} catch {
+			return null;
+		}
 	}
 
 	/**
