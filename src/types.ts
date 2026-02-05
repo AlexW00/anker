@@ -52,17 +52,6 @@ export interface ReviewState {
 }
 
 /**
- * Cache entry storing the rendered output text for a dynamic pipe call.
- * Stored in flashcard frontmatter under `_cache`.
- */
-export interface DynamicPipeCacheEntry {
-	/** The rendered output text (what gets inserted into the template) */
-	output: string;
-	/** Timestamp when this entry was cached */
-	cachedAt: number;
-}
-
-/**
  * Flashcard frontmatter structure.
  * This is the source of truth for all card data.
  *
@@ -84,7 +73,7 @@ export interface FlashcardFrontmatter {
 	_type: "flashcard";
 	_template: string; // WikiLink to template file, e.g. "[[Templates/Vocab Card]]"
 	_review: ReviewState;
-	_cache?: Record<string, DynamicPipeCacheEntry>; // Dynamic pipe cache keyed by hash
+	_cache?: Record<string, string>; // Dynamic pipe cache keyed by hash
 	// User fields are stored at the top level (indexed by string)
 	[key: string]: unknown;
 }

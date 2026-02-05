@@ -63,10 +63,7 @@ export class TemplateService {
 	 * Flush pending cache writes and return them.
 	 * Called by CardService after render to merge into frontmatter.
 	 */
-	flushPendingCacheWrites(): Map<
-		string,
-		{ output: string; cachedAt: number }
-	> {
+	flushPendingCacheWrites(): Map<string, string> {
 		if (!this.aiService) {
 			return new Map();
 		}

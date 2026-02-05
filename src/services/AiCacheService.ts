@@ -1,5 +1,5 @@
 import { App, TFile, stringifyYaml } from "obsidian";
-import type { DynamicPipeCacheEntry, FlashcardFrontmatter } from "../types";
+import type { FlashcardFrontmatter } from "../types";
 
 /**
  * Service for caching dynamic pipe outputs in flashcard frontmatter.
@@ -14,7 +14,7 @@ export class AiCacheService {
 	 * Pending cache writes during a single render operation.
 	 * Accumulated here and flushed to frontmatter after render completes.
 	 */
-	private pendingWrites: Map<string, DynamicPipeCacheEntry> = new Map();
+	private pendingWrites: Map<string, string> = new Map();
 
 	constructor(app: App) {
 		this.app = app;
@@ -40,9 +40,9 @@ export class AiCacheService {
 	 * Get a cached entry from a card's frontmatter.
 	 * @param cardPath Path to the flashcard file
 	 * @param key Cache key (hash)
-	 * @returns The cached entry or null if not found
+	 * @returns The cached output or null if not found
 	 */
-	get(cardPath: string, key: string): DynamicPipeCacheEntry | null {
+	get(cardPath: string, key: string): string | null {
 		// First check pending writes from current render
 		const pending = this.pendingWrites.get(key);
 		if (pending) {
@@ -66,17 +66,14 @@ export class AiCacheService {
 	 * @param output The rendered output text
 	 */
 	set(key: string, output: string): void {
-		this.pendingWrites.set(key, {
-			output,
-			cachedAt: Date.now(),
-		});
+		this.pendingWrites.set(key, output);
 	}
 
 	/**
 	 * Get all pending cache writes and clear them.
 	 * Called by CardService after render to merge into frontmatter.
 	 */
-	flushPendingWrites(): Map<string, DynamicPipeCacheEntry> {
+	flushPendingWrites(): Map<string, string> {
 		const writes = this.pendingWrites;
 		this.pendingWrites = new Map();
 		return writes;
@@ -158,7 +155,33 @@ export class AiCacheService {
 		frontmatter: Record<string, unknown>,
 		body: string,
 	): string {
-		const yamlContent = stringifyYaml(frontmatter);
+		const orderedFrontmatter = this.orderFrontmatter(frontmatter);
+		const yamlContent = stringifyYaml(orderedFrontmatter);
 		return `---\n${yamlContent}---\n${body}`;
+	}
+
+	/**
+	 * Order frontmatter keys with system properties first.
+	 */
+	private orderFrontmatter(
+		frontmatter: Record<string, unknown>,
+	): Record<string, unknown> {
+		const ordered: Record<string, unknown> = {};
+		const systemKeys = ["_type", "_template", "_review", "_cache"];
+
+		for (const key of systemKeys) {
+			if (key in frontmatter) {
+				ordered[key] = frontmatter[key];
+			}
+		}
+
+		for (const key of Object.keys(frontmatter)) {
+			if (systemKeys.includes(key)) {
+				continue;
+			}
+			ordered[key] = frontmatter[key];
+		}
+
+		return ordered;
 	}
 }

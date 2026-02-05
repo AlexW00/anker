@@ -159,10 +159,7 @@ export class AiService {
 	 * Flush pending cache writes and return them.
 	 * Called by CardService after render to merge into frontmatter.
 	 */
-	flushPendingCacheWrites(): Map<
-		string,
-		{ output: string; cachedAt: number }
-	> {
+	flushPendingCacheWrites(): Map<string, string> {
 		return this.cacheService.flushPendingWrites();
 	}
 
@@ -313,7 +310,7 @@ export class AiService {
 			);
 			const cached = this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
-				return cached.output;
+				return cached;
 			}
 		}
 
@@ -379,7 +376,7 @@ export class AiService {
 			);
 			const cached = this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
-				return cached.output;
+				return cached;
 			}
 		}
 
@@ -450,7 +447,7 @@ export class AiService {
 			);
 			const cached = this.cacheService.get(context.cardPath, cacheKey);
 			if (cached) {
-				return cached.output;
+				return cached;
 			}
 		}
 

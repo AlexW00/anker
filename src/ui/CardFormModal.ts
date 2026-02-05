@@ -1,7 +1,6 @@
 import {
 	AbstractInputSuggest,
 	App,
-	ButtonComponent,
 	DropdownComponent,
 	Modal,
 	Notice,
@@ -13,7 +12,11 @@ import type { Deck, FlashcardTemplate } from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
-import { StatusTextComponent } from "./components";
+import {
+	ButtonRowComponent,
+	ProgressBarComponent,
+	StatusTextComponent,
+} from "./components";
 
 /**
  * MIME type accept strings for all media types combined.
@@ -180,10 +183,8 @@ export class CardFormModal extends Modal {
 	private textareaSuggests: TextareaSuggest[] = [];
 	private deckSuggest: DeckPathSuggest | null = null;
 	private isSubmitting = false;
-	private createButton: ButtonComponent | null = null;
-	private cancelButton: ButtonComponent | null = null;
-	private createAnotherCheckbox: HTMLInputElement | null = null;
-	private cacheCheckbox: HTMLInputElement | null = null;
+	private buttonRow: ButtonRowComponent | null = null;
+	private progressBar: ProgressBarComponent | null = null;
 	private statusText: StatusTextComponent | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
@@ -462,68 +463,50 @@ export class CardFormModal extends Modal {
 			cls: "flashcard-modal-sticky-footer",
 		});
 
-		// Buttons row
-		const buttonRow = footerContainer.createDiv({
-			cls: "flashcard-modal-buttons",
-		});
-
-		// Cancel button (left side)
-		const leftButtons = buttonRow.createDiv({
-			cls: "flashcard-buttons-left",
-		});
-		this.cancelButton = new ButtonComponent(leftButtons)
-			.setButtonText("Cancel")
-			.onClick(() => this.close());
-
-		// Create buttons (right side)
-		const rightButtons = buttonRow.createDiv({
-			cls: "flashcard-buttons-right",
-		});
+		const checkboxes = [] as {
+			label: string;
+			checked: boolean;
+			onChange: (checked: boolean) => void;
+			tooltip?: string;
+		}[];
 
 		if (!isEditMode) {
-			const createAnotherLabel = rightButtons.createEl("label", {
-				cls: "flashcard-checkbox-toggle",
-				attr: {
-					title: "Keep this dialog open after creating a card",
+			checkboxes.push({
+				label: "Create another",
+				checked: this.createAnother,
+				onChange: (checked) => {
+					this.createAnother = checked;
 				},
+				tooltip: "Keep this dialog open after creating a card",
 			});
-			this.createAnotherCheckbox = createAnotherLabel.createEl("input", {
-				type: "checkbox",
-			});
-			this.createAnotherCheckbox.checked = this.createAnother;
-			this.createAnotherCheckbox.addEventListener("change", () => {
-				this.createAnother =
-					this.createAnotherCheckbox?.checked ?? false;
-			});
-			createAnotherLabel.createSpan({ text: "Create another" });
 		}
 
 		if (isEditMode) {
-			// Cache AI results checkbox for edit mode
-			const cacheLabel = rightButtons.createEl("label", {
-				cls: "flashcard-checkbox-toggle",
-				attr: {
-					title: "When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
+			checkboxes.push({
+				label: "Cache AI results",
+				checked: this.useCache,
+				onChange: (checked) => {
+					this.useCache = checked;
 				},
+				tooltip:
+					"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
 			});
-			this.cacheCheckbox = cacheLabel.createEl("input", {
-				type: "checkbox",
-			});
-			this.cacheCheckbox.checked = this.useCache;
-			this.cacheCheckbox.addEventListener("change", () => {
-				if (this.cacheCheckbox) {
-					this.useCache = this.cacheCheckbox.checked;
-				}
-			});
-			cacheLabel.createSpan({ text: "Cache AI results" });
 		}
 
-		this.createButton = new ButtonComponent(rightButtons)
-			.setButtonText(isEditMode ? "Save" : "Create")
-			.setCta()
-			.onClick(() => {
+		this.buttonRow = new ButtonRowComponent(footerContainer, {
+			cancelText: "Cancel",
+			onCancel: () => this.close(),
+			submitText: isEditMode ? "Save" : "Create",
+			onSubmit: () => {
 				void this.submitCard(this.createAnother);
-			});
+			},
+			checkboxes,
+		});
+
+		this.progressBar = new ProgressBarComponent(footerContainer, {
+			containerClass: "flashcard-card-progress",
+			showText: false,
+		});
 
 		// Status text (shown below buttons during submission)
 		this.statusText = new StatusTextComponent(footerContainer);
@@ -622,29 +605,35 @@ export class CardFormModal extends Modal {
 		const isEditMode = this.mode === "edit";
 		const buttonText = isEditMode ? "Saving..." : "Creating...";
 
-		if (this.createButton) {
-			this.createButton.setDisabled(this.isSubmitting);
-			this.createButton.setButtonText(
-				this.isSubmitting ? buttonText : isEditMode ? "Save" : "Create",
+		this.buttonRow?.setSubmitDisabled(this.isSubmitting);
+		this.buttonRow?.setCancelDisabled(this.isSubmitting);
+		this.buttonRow?.setSubmitText(
+			this.isSubmitting ? buttonText : isEditMode ? "Save" : "Create",
+		);
+		this.buttonRow?.setSubmitLoading(this.isSubmitting);
+
+		if (!isEditMode) {
+			this.buttonRow?.setCheckboxDisabled(
+				"Create another",
+				this.isSubmitting,
 			);
-			if (this.createButton.buttonEl) {
-				this.createButton.buttonEl.toggleClass(
-					"flashcard-button-loading",
-					this.isSubmitting,
-				);
+		}
+
+		if (isEditMode) {
+			this.buttonRow?.setCheckboxDisabled(
+				"Cache AI results",
+				this.isSubmitting,
+			);
+		}
+
+		if (this.progressBar) {
+			if (this.isSubmitting) {
+				this.progressBar.show();
+				this.progressBar.setFraction(1);
+			} else {
+				this.progressBar.reset();
+				this.progressBar.hide();
 			}
-		}
-
-		if (this.cancelButton) {
-			this.cancelButton.setDisabled(this.isSubmitting);
-		}
-
-		if (this.createAnotherCheckbox) {
-			this.createAnotherCheckbox.disabled = this.isSubmitting;
-		}
-
-		if (this.cacheCheckbox) {
-			this.cacheCheckbox.disabled = this.isSubmitting;
 		}
 
 		this.contentEl.toggleClass(

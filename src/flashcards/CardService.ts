@@ -1,10 +1,5 @@
 import { App, TFile, stringifyYaml } from "obsidian";
-import type {
-	DynamicPipeCacheEntry,
-	Flashcard,
-	FlashcardFrontmatter,
-	ReviewState,
-} from "../types";
+import type { Flashcard, FlashcardFrontmatter, ReviewState } from "../types";
 import { debugLog, PROTECTION_COMMENT } from "../types";
 import { TemplateService } from "./TemplateService";
 import { createEmptyCard } from "ts-fsrs";
@@ -193,25 +188,25 @@ export class CardService {
 	 */
 	private applyCacheToFrontmatter(
 		frontmatter: Record<string, unknown>,
-		pendingWrites: Map<string, DynamicPipeCacheEntry>,
+		pendingWrites: Map<string, string>,
 	): Record<string, unknown> {
 		const result = { ...frontmatter };
 
 		if (pendingWrites.size > 0) {
 			// Merge new cache entries with existing ones
 			const existingCache =
-				(result._cache as Record<string, DynamicPipeCacheEntry>) ?? {};
-			const newCache: Record<string, DynamicPipeCacheEntry> = {
+				(result._cache as Record<string, string>) ?? {};
+			const newCache: Record<string, string> = {
 				...existingCache,
 			};
-			for (const [key, entry] of pendingWrites) {
-				newCache[key] = entry;
+			for (const [key, output] of pendingWrites) {
+				newCache[key] = output;
 			}
 			result._cache = newCache;
 		} else {
 			// No new cache entries - check if we should clean up existing empty cache
 			const existingCache = result._cache as
-				| Record<string, DynamicPipeCacheEntry>
+				| Record<string, string>
 				| undefined;
 			if (!existingCache || Object.keys(existingCache).length === 0) {
 				delete result._cache;
@@ -422,8 +417,34 @@ export class CardService {
 		frontmatter: Record<string, unknown>,
 		body: string,
 	): string {
-		const yamlContent = stringifyYaml(frontmatter);
+		const orderedFrontmatter = this.orderFrontmatter(frontmatter);
+		const yamlContent = stringifyYaml(orderedFrontmatter);
 		return `---\n${yamlContent}---\n\n${PROTECTION_COMMENT}\n\n${body}`;
+	}
+
+	/**
+	 * Order frontmatter keys with system properties first.
+	 */
+	private orderFrontmatter(
+		frontmatter: Record<string, unknown>,
+	): Record<string, unknown> {
+		const ordered: Record<string, unknown> = {};
+		const systemKeys = ["_type", "_template", "_review", "_cache"];
+
+		for (const key of systemKeys) {
+			if (key in frontmatter) {
+				ordered[key] = frontmatter[key];
+			}
+		}
+
+		for (const key of Object.keys(frontmatter)) {
+			if (systemKeys.includes(key)) {
+				continue;
+			}
+			ordered[key] = frontmatter[key];
+		}
+
+		return ordered;
 	}
 
 	/**
