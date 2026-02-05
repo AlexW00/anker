@@ -4,6 +4,15 @@ import type { FlashcardTemplate, TemplateVariable, FuriganaFormat } from "../typ
 import { DEFAULT_BASIC_TEMPLATE } from "../types";
 import type { AiService, DynamicPipeContext } from "../services/AiService";
 import type { FuriganaService } from "../services/FuriganaService";
+import {
+	parseTemplateContent as parseTemplateContentPure,
+	extractVariables as extractVariablesPure,
+	findInvalidVariables as findInvalidVariablesPure,
+	usesDynamicPipes as usesDynamicPipesPure,
+	prepareTemplateForLinePruning,
+	cleanupRenderedOutput,
+	createNunjucksEnv,
+} from "../services/TemplateRenderingLogic";
 
 /**
  * Parsed template content with optional frontmatter.
@@ -32,8 +41,6 @@ export class TemplateService {
 	private app: App;
 	private env: nunjucks.Environment;
 	private defaultTemplateContent: string;
-	private readonly lineStartMarker = "__ANKER_LINE_START__";
-	private readonly lineEndMarker = "__ANKER_LINE_END__";
 	private aiService: AiService | null = null;
 	private furiganaService: FuriganaService | null = null;
 	private furiganaFormat: FuriganaFormat = "curly";
@@ -43,12 +50,8 @@ export class TemplateService {
 		this.app = app;
 		this.defaultTemplateContent =
 			defaultTemplateContent ?? DEFAULT_BASIC_TEMPLATE;
-		// Configure Nunjucks with autoescape disabled (we're generating Markdown, not HTML)
-		this.env = new nunjucks.Environment(null, {
-			autoescape: false,
-			trimBlocks: true,
-			lstripBlocks: true,
-		});
+		// Use the pure function to create configured Nunjucks environment
+		this.env = createNunjucksEnv();
 
 		// Register dynamic pipe filters (async filters)
 		this.registerAiFilters();
@@ -317,25 +320,15 @@ export class TemplateService {
 	 * Returns both the frontmatter (as object) and the body (template content).
 	 */
 	parseTemplateContent(content: string): ParsedTemplate {
-		// Match frontmatter: starts with ---, ends with --- (with optional trailing newline)
-		// Handles cases where body may be empty or start immediately after ---
-		const fmMatch = content.match(
-			/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$/,
-		);
-		if (!fmMatch) {
+		const { rawYaml, body } = parseTemplateContentPure(content);
+
+		if (rawYaml === null) {
 			console.debug("[Anker] template-parse: no frontmatter found");
-			// No frontmatter, entire content is the body
-			return { frontmatter: null, body: content };
+			return { frontmatter: null, body };
 		}
 
-		const yamlContent = fmMatch[1] ?? "";
-		const body = (fmMatch[2] ?? "").trim();
-
 		try {
-			const frontmatter = parseYaml(yamlContent) as Record<
-				string,
-				unknown
-			>;
+			const frontmatter = parseYaml(rawYaml) as Record<string, unknown>;
 			const keys = frontmatter ? Object.keys(frontmatter) : [];
 			console.debug("[Anker] template-parse: frontmatter keys", keys);
 			return { frontmatter, body };
@@ -360,33 +353,8 @@ export class TemplateService {
 	 * Automatically strips frontmatter before extracting variables.
 	 */
 	extractVariables(templateContent: string): TemplateVariable[] {
-		// Strip frontmatter before extracting variables
 		const { body } = this.parseTemplateContent(templateContent);
-
-		// Strip HTML comments before parsing to ignore commented-out examples
-		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
-
-		const variableRegex =
-			/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|[^}]*)?\}\}/g;
-		const variables = new Map<string, TemplateVariable>();
-
-		let match;
-		while ((match = variableRegex.exec(contentWithoutComments)) !== null) {
-			const name = match[1];
-			if (!name) continue;
-			// Skip built-in Nunjucks variables and loop variables
-			if (
-				!["loop", "super", "self", "true", "false", "none"].includes(
-					name,
-				)
-			) {
-				if (!variables.has(name)) {
-					variables.set(name, { name });
-				}
-			}
-		}
-
-		return Array.from(variables.values());
+		return extractVariablesPure(body);
 	}
 
 	/**
@@ -395,39 +363,7 @@ export class TemplateService {
 	 */
 	findInvalidVariables(templateContent: string): string[] {
 		const { body } = this.parseTemplateContent(templateContent);
-		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
-		const allVariablePatterns = /\{\{\s*([^{}|]+?)(?:\s*\|[^}]*)?\s*\}\}/g;
-		const simpleToken = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
-		const builtins = new Set([
-			"loop",
-			"super",
-			"self",
-			"true",
-			"false",
-			"none",
-		]);
-		const invalid = new Set<string>();
-
-		let match;
-		while (
-			(match = allVariablePatterns.exec(contentWithoutComments)) !== null
-		) {
-			const rawName = match[1]?.trim();
-			if (!rawName) {
-				continue;
-			}
-			if (builtins.has(rawName)) {
-				continue;
-			}
-			if (!simpleToken.test(rawName)) {
-				continue;
-			}
-			if (rawName.includes("-")) {
-				invalid.add(rawName);
-			}
-		}
-
-		return Array.from(invalid.values());
+		return findInvalidVariablesPure(body);
 	}
 
 	/**
@@ -436,10 +372,7 @@ export class TemplateService {
 	 */
 	usesDynamicPipes(templateContent: string): boolean {
 		const { body } = this.parseTemplateContent(templateContent);
-		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
-		return /\|\s*(askAi|generateImage|generateSpeech|searchImage|furigana)\b/.test(
-			contentWithoutComments,
-		);
+		return usesDynamicPipesPure(body);
 	}
 
 	/**
@@ -459,8 +392,7 @@ export class TemplateService {
 		};
 
 		try {
-			const prepared =
-				this.prepareTemplateForLinePruning(templateContent);
+			const prepared = prepareTemplateForLinePruning(templateContent);
 
 			// Use callback-based renderString for async filter support
 			const rendered = await new Promise<string>((resolve, reject) => {
@@ -473,7 +405,7 @@ export class TemplateService {
 				});
 			});
 
-			return this.cleanupRenderedOutput(rendered);
+			return cleanupRenderedOutput(rendered);
 		} finally {
 			// Clear the render context
 			this.currentRenderContext = null;
@@ -488,61 +420,9 @@ export class TemplateService {
 		templateContent: string,
 		fields: Record<string, string>,
 	): string {
-		const prepared = this.prepareTemplateForLinePruning(templateContent);
+		const prepared = prepareTemplateForLinePruning(templateContent);
 		const rendered = this.env.renderString(prepared, fields);
-		return this.cleanupRenderedOutput(rendered);
-	}
-
-	/**
-	 * Remove lines that only contain empty variables.
-	 */
-	private prepareTemplateForLinePruning(templateContent: string): string {
-		const lines = templateContent.split(/\r?\n/);
-		const variableOnlyLine = /^\s*(\{\{[^}]+\}\}\s*)+$/;
-		return lines
-			.map((line) => {
-				if (!variableOnlyLine.test(line)) {
-					return line;
-				}
-				return `${this.lineStartMarker}${line}${this.lineEndMarker}`;
-			})
-			.join("\n");
-	}
-
-	private cleanupRenderedOutput(rendered: string): string {
-		const withoutMarkers = rendered
-			.replaceAll(this.lineStartMarker, "")
-			.replaceAll(this.lineEndMarker, "");
-		const lines = withoutMarkers.split(/\r?\n/);
-		const cleaned: string[] = [];
-		let lastWasBlank = false;
-		for (const line of lines) {
-			const isBlank = line.trim().length === 0;
-			if (isBlank) {
-				if (cleaned.length === 0) {
-					continue;
-				}
-				if (lastWasBlank) {
-					continue;
-				}
-				lastWasBlank = true;
-				cleaned.push("");
-				continue;
-			}
-
-			lastWasBlank = false;
-			cleaned.push(line);
-		}
-
-		while (cleaned.length > 0) {
-			const lastLine = cleaned[cleaned.length - 1] ?? "";
-			if (lastLine.trim().length > 0) {
-				break;
-			}
-			cleaned.pop();
-		}
-
-		return cleaned.join("\n");
+		return cleanupRenderedOutput(rendered);
 	}
 
 	/**
