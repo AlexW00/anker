@@ -160,6 +160,15 @@ describe("Review Bugs", function () {
 	});
 
 	it("rating Easy removes card from session when scheduled for future", async function () {
+		// Get the initial due card count directly from the plugin
+		const initialDueCount = await browser.executeObsidian(({ app }) => {
+			const obsidianApp = app as ObsidianAppLike;
+			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
+			if (!plugin?.deckService) return 0;
+			return plugin.deckService.getDueCards("flashcards").length;
+		});
+		expect(initialDueCount).toBeGreaterThan(0);
+
 		// Start a review session
 		await browser.executeObsidian(({ app }) => {
 			const obsidianApp = app as ObsidianAppLike;
@@ -172,67 +181,45 @@ describe("Review Bugs", function () {
 		const reviewView = browser.$(".flashcard-review");
 		await reviewView.waitForExist({ timeout: 5000 });
 
-		// Get initial card count from progress text
-		const initialProgress = await browser
-			.$(".flashcard-progress-text")
-			.getText();
-		const initialMatch = initialProgress.match(/(\d+)\s*\/\s*(\d+)/);
-		const initialCompleted = initialMatch
-			? parseInt(initialMatch[1] ?? "0", 10)
-			: 0;
-		const initialTotal = initialMatch
-			? parseInt(initialMatch[2] ?? "0", 10)
-			: 0;
-
-		expect(initialTotal).toBeGreaterThan(0);
-		expect(initialCompleted).toBe(0); // Should start at 0 completed
-
 		// Reveal answer
 		const revealButton = browser.$(
 			".flashcard-review .flashcard-btn-reveal",
 		);
-		if (await revealButton.isExisting()) {
-			await revealButton.click();
-		}
+		await revealButton.waitForExist({ timeout: 3000 });
+		await revealButton.click();
 
-		// Wait for Easy button specifically using its CSS class
+		// Wait for Easy button and click it
 		const easyButton = browser.$(".flashcard-review .flashcard-btn-easy");
 		await easyButton.waitForExist({ timeout: 3000 });
 		await easyButton.waitForClickable({ timeout: 3000 });
 		await easyButton.click();
 
-		// Wait for the UI to update - either progress changes or review completes
+		// Wait for the review view to finish re-rendering
+		// (rateCard is async - it reads files from disk, re-renders)
+		await browser.pause(2000);
+
+		// Verify the card was removed: due count should have decreased
+		// Query the plugin API directly rather than relying on DOM state
 		await browser.waitUntil(
 			async () => {
-				try {
-					// Check if review completed
-					const completeEl = browser.$(".flashcard-complete");
-					if (await completeEl.isExisting()) return true;
-
-					// Check if progress updated (may throw stale element on re-render)
-					const progressText = browser.$(".flashcard-progress-text");
-					if (await progressText.isExisting()) {
-						const text = await progressText.getText();
-						const match = text.match(/(\d+)\s*\/\s*(\d+)/);
-						const completed = match
-							? parseInt(match[1] ?? "0", 10)
-							: 0;
-						return completed > initialCompleted;
-					}
-					return false;
-				} catch {
-					// Stale element during re-render - retry on next interval
-					return false;
-				}
+				const currentDueCount = await browser.executeObsidian(
+					({ app }) => {
+						const obsidianApp = app as ObsidianAppLike;
+						const plugin =
+							obsidianApp.plugins?.getPlugin?.("anker");
+						if (!plugin?.deckService) return -1;
+						return plugin.deckService
+							.getDueCards("flashcards").length;
+					},
+				);
+				return currentDueCount < initialDueCount;
 			},
 			{
 				timeout: 10000,
-				interval: 300,
-				timeoutMsg: "Progress did not update after rating Easy",
+				interval: 500,
+				timeoutMsg:
+					"Due card count did not decrease after rating Easy",
 			},
 		);
-
-		// At this point, either the card was marked complete or the session ended
-		// Both outcomes confirm the card was removed from the due list
 	});
 });
