@@ -240,8 +240,7 @@ export class ReviewView extends ItemView {
 			this.session.reviewedCount,
 			this.session.initialTotal,
 		);
-		const progress =
-			(completedCount / this.session.initialTotal) * 100;
+		const progress = (completedCount / this.session.initialTotal) * 100;
 		const progressBar = container.createDiv({
 			cls: "flashcard-progress-bar",
 		});
