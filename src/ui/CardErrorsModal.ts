@@ -115,7 +115,7 @@ export class CardErrorsModal extends Modal {
 						tooltip:
 							"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
 					},
-			  ]
+				]
 			: [];
 
 		this.buttonRow = new ButtonRowComponent(contentEl, {

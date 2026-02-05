@@ -297,8 +297,7 @@ export class TemplateService {
 	findInvalidVariables(templateContent: string): string[] {
 		const { body } = this.parseTemplateContent(templateContent);
 		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
-		const allVariablePatterns =
-			/\{\{\s*([^{}|]+?)(?:\s*\|[^}]*)?\s*\}\}/g;
+		const allVariablePatterns = /\{\{\s*([^{}|]+?)(?:\s*\|[^}]*)?\s*\}\}/g;
 		const simpleToken = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
 		const builtins = new Set([
 			"loop",
@@ -311,7 +310,9 @@ export class TemplateService {
 		const invalid = new Set<string>();
 
 		let match;
-		while ((match = allVariablePatterns.exec(contentWithoutComments)) !== null) {
+		while (
+			(match = allVariablePatterns.exec(contentWithoutComments)) !== null
+		) {
 			const rawName = match[1]?.trim();
 			if (!rawName) {
 				continue;

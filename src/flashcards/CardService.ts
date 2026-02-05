@@ -547,9 +547,7 @@ export class CardService {
 		const templatePaths = new Set<string>();
 		for (const file of files) {
 			const cache = this.app.metadataCache.getFileCache(file);
-			const fm = cache?.frontmatter as
-				| FlashcardFrontmatter
-				| undefined;
+			const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
 			if (fm?._type !== "flashcard" || !fm._template) {
 				continue;
 			}
@@ -557,7 +555,8 @@ export class CardService {
 		}
 
 		for (const templatePath of templatePaths) {
-			const template = await this.templateService.loadTemplate(templatePath);
+			const template =
+				await this.templateService.loadTemplate(templatePath);
 			if (!template) {
 				continue;
 			}
