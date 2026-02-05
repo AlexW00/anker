@@ -1,5 +1,6 @@
 import * as path from "path";
 import { readFile, mkdir, rm, cp, open, writeFile, stat } from "fs/promises";
+import { browser } from "@wdio/globals";
 import {
 	parseObsidianVersions,
 	obsidianBetaAvailable,
@@ -130,4 +131,21 @@ export const config: WebdriverIO.Config = {
 	cacheDir: cacheDir,
 
 	injectGlobals: false, // import describe/expect etc explicitly to make eslint happy
+
+	afterTest: async function (
+		test,
+		context,
+		{ error, result, duration, passed, retries },
+	) {
+		if (!passed) {
+			const timestamp = new Date().toISOString().replace(/:/g, "-");
+			const screenshotPath = path.join(
+				"errorShots",
+				`${sanitizeVersion(test.title)} - ${timestamp}.png`,
+			);
+			await mkdir("errorShots", { recursive: true });
+			await browser.saveScreenshot(screenshotPath);
+			console.log(`Saved screenshot: ${screenshotPath}`);
+		}
+	},
 };
