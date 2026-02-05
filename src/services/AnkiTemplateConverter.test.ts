@@ -5,9 +5,7 @@ import type { AnkiModel } from "../types";
 /**
  * Create a minimal mock AnkiModel for testing.
  */
-function createMockModel(
-	overrides: Partial<AnkiModel> = {}
-): AnkiModel {
+function createMockModel(overrides: Partial<AnkiModel> = {}): AnkiModel {
 	return {
 		id: "123456",
 		name: "Basic",
@@ -269,7 +267,7 @@ describe("AnkiTemplateConverter", () => {
 			const templates = converter.convertModel(model);
 			// Should not have duplicates
 			const frontCount = templates[0].variables.filter(
-				(v) => v === "Front"
+				(v) => v === "Front",
 			).length;
 			expect(frontCount).toBe(1);
 		});
@@ -460,7 +458,7 @@ describe("AnkiTemplateConverter", () => {
 			expect(templates[0].body).toContain("{% if Example %}");
 			expect(templates[0].body).toContain("---");
 			expect(templates[0].variables).toEqual(
-				expect.arrayContaining(["Word", "Meaning", "Example", "Audio"])
+				expect.arrayContaining(["Word", "Meaning", "Example", "Audio"]),
 			);
 		});
 

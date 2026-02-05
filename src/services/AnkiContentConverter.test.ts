@@ -60,7 +60,8 @@ describe("AnkiContentConverter", () => {
 		});
 
 		it("should handle divs with classes", () => {
-			const html = '<div class="front"><div class="word">Hello</div></div>';
+			const html =
+				'<div class="front"><div class="word">Hello</div></div>';
 			const result = converter.convert(html, emptyMediaMap);
 			expect(result.markdown).toBe("Hello");
 		});
@@ -78,9 +79,7 @@ describe("AnkiContentConverter", () => {
 		it("should convert basic cloze deletion", () => {
 			const html = "<p>The capital of France is {{c1::Paris}}</p>";
 			const result = converter.convert(html, emptyMediaMap);
-			expect(result.markdown).toBe(
-				"The capital of France is ==Paris=="
-			);
+			expect(result.markdown).toBe("The capital of France is ==Paris==");
 		});
 
 		it("should convert cloze with hint (discarding hint)", () => {
@@ -257,7 +256,7 @@ describe("AnkiContentConverter", () => {
 				'<p>Visit <a href="https://example.com">Example</a></p>';
 			const result = converter.convert(html, emptyMediaMap);
 			expect(result.markdown).toBe(
-				"Visit [Example](https://example.com)"
+				"Visit [Example](https://example.com)",
 			);
 		});
 	});

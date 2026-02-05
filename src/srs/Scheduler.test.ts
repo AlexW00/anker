@@ -7,7 +7,7 @@ import type { FlashcardsPluginSettings, ReviewState } from "../types";
  * Create minimal mock settings for Scheduler tests.
  */
 function createMockSettings(
-	overrides: Partial<FlashcardsPluginSettings> = {}
+	overrides: Partial<FlashcardsPluginSettings> = {},
 ): FlashcardsPluginSettings {
 	return {
 		fsrsRequestRetention: 0.9,
@@ -176,7 +176,7 @@ describe("Scheduler", () => {
 			expect(result.reps).toBe(state.reps + 1);
 			// Due date should be in the future
 			expect(new Date(result.due).getTime()).toBeGreaterThan(
-				new Date().getTime() - 1000
+				new Date().getTime() - 1000,
 			);
 		});
 
@@ -199,10 +199,10 @@ describe("Scheduler", () => {
 			expect(result.last_review).toBeDefined();
 			const lastReview = new Date(result.last_review!);
 			expect(lastReview.getTime()).toBeGreaterThanOrEqual(
-				before.getTime() - 1000
+				before.getTime() - 1000,
 			);
 			expect(lastReview.getTime()).toBeLessThanOrEqual(
-				after.getTime() + 1000
+				after.getTime() + 1000,
 			);
 		});
 
@@ -222,7 +222,7 @@ describe("Scheduler", () => {
 
 			// Update to lower retention (0.7)
 			scheduler.updateSettings(
-				createMockSettings({ fsrsRequestRetention: 0.7 })
+				createMockSettings({ fsrsRequestRetention: 0.7 }),
 			);
 			const lowRetentionIntervals = scheduler.getNextStates(state);
 
@@ -241,7 +241,7 @@ describe("Scheduler", () => {
 
 			const normalGood = parseInterval(normalIntervals.good.interval);
 			const lowRetentionGood = parseInterval(
-				lowRetentionIntervals.good.interval
+				lowRetentionIntervals.good.interval,
 			);
 
 			// With lower desired retention, FSRS schedules longer intervals
