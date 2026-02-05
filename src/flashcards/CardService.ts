@@ -199,10 +199,8 @@ export class CardService {
 
 		if (pendingWrites.size > 0) {
 			// Merge new cache entries with existing ones
-			const existingCache = (result._cache as Record<
-				string,
-				DynamicPipeCacheEntry
-			>) ?? {};
+			const existingCache =
+				(result._cache as Record<string, DynamicPipeCacheEntry>) ?? {};
 			const newCache: Record<string, DynamicPipeCacheEntry> = {
 				...existingCache,
 			};

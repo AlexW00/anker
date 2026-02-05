@@ -214,7 +214,6 @@ export interface AiProviderConfig {
 	baseUrl?: string;
 }
 
-
 /**
  * Plugin settings interface.
  */
