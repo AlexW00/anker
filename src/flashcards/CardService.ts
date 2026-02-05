@@ -316,13 +316,17 @@ export class CardService {
 		file: TFile,
 		reviewState: ReviewState,
 	): Promise<void> {
-		console.debug(`[Anker:updateReviewState] file=${file.path}, due=${reviewState.due}, state=${reviewState.state}`);
+		console.debug(
+			`[Anker:updateReviewState] file=${file.path}, due=${reviewState.due}, state=${reviewState.state}`,
+		);
 		const content = await this.app.vault.read(file);
 		const cache = this.app.metadataCache.getFileCache(file);
 		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
 
 		if (fm?._type !== "flashcard") {
-			console.debug(`[Anker:updateReviewState] NOT a flashcard, aborting`);
+			console.debug(
+				`[Anker:updateReviewState] NOT a flashcard, aborting`,
+			);
 			throw new Error("Not a flashcard");
 		}
 

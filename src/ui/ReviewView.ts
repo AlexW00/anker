@@ -120,7 +120,9 @@ export class ReviewView extends ItemView {
 	 */
 	async startSession(deckPath: string) {
 		const dueCards = this.plugin.deckService.getDueCards(deckPath);
-		console.debug(`[Anker:startSession] deckPath=${deckPath}, dueCards=${dueCards.length}`);
+		console.debug(
+			`[Anker:startSession] deckPath=${deckPath}, dueCards=${dueCards.length}`,
+		);
 
 		if (dueCards.length === 0) {
 			this.renderComplete();
@@ -143,7 +145,9 @@ export class ReviewView extends ItemView {
 		this.lastCardPath = "";
 
 		await this.loadCurrentCard();
-		console.debug(`[Anker:startSession] loadCurrentCard done, totalSides=${this.session.totalSides}, contentSides=${this.currentContent.length}`);
+		console.debug(
+			`[Anker:startSession] loadCurrentCard done, totalSides=${this.session.totalSides}, contentSides=${this.currentContent.length}`,
+		);
 		void this.render();
 	}
 
@@ -378,7 +382,9 @@ export class ReviewView extends ItemView {
 		const isLastSide =
 			this.session.currentSide >= this.session.totalSides - 1;
 
-		console.debug(`[Anker:renderControls] card=${currentCard.path}, currentSide=${this.session.currentSide}, totalSides=${this.session.totalSides}, isLastSide=${isLastSide}`);
+		console.debug(
+			`[Anker:renderControls] card=${currentCard.path}, currentSide=${this.session.currentSide}, totalSides=${this.session.totalSides}, isLastSide=${isLastSide}`,
+		);
 
 		if (!isLastSide) {
 			// Show "Reveal" button
@@ -405,7 +411,10 @@ export class ReviewView extends ItemView {
 
 		const reviewState = card.frontmatter._review;
 		const nextStates = this.plugin.scheduler.getNextStates(reviewState);
-		console.debug(`[Anker:renderRatingButtons] card=${card.path}, reviewState=`, reviewState);
+		console.debug(
+			`[Anker:renderRatingButtons] card=${card.path}, reviewState=`,
+			reviewState,
+		);
 
 		const buttonsContainer = container.createDiv({
 			cls: "flashcard-rating-buttons",
@@ -423,10 +432,17 @@ export class ReviewView extends ItemView {
 				.setButtonText(label)
 				.setClass(className)
 				.onClick(() => {
-					console.debug(`[Anker:ratingBtnClick] ${className} onClick fired, rating=${rating}`);
+					console.debug(
+						`[Anker:ratingBtnClick] ${className} onClick fired, rating=${rating}`,
+					);
 					void this.rateCard(rating);
 				});
-			console.debug(`[Anker:renderRatingButtons] created ${className} button, el=`, btnComponent.buttonEl?.tagName, `classes=`, btnComponent.buttonEl?.className);
+			console.debug(
+				`[Anker:renderRatingButtons] created ${className} button, el=`,
+				btnComponent.buttonEl?.tagName,
+				`classes=`,
+				btnComponent.buttonEl?.className,
+			);
 			btnWrapper.createSpan({
 				text: interval,
 				cls: "flashcard-interval",
@@ -467,7 +483,12 @@ export class ReviewView extends ItemView {
 	}
 
 	private revealNext() {
-		console.debug(`[Anker:revealNext] called, session=`, this.session ? `side=${this.session.currentSide}/${this.session.totalSides}` : 'null');
+		console.debug(
+			`[Anker:revealNext] called, session=`,
+			this.session
+				? `side=${this.session.currentSide}/${this.session.totalSides}`
+				: "null",
+		);
 		if (!this.session) return;
 
 		if (this.session.currentSide < this.session.totalSides - 1) {
@@ -477,7 +498,12 @@ export class ReviewView extends ItemView {
 	}
 
 	private async rateCard(rating: Rating) {
-		console.debug(`[Anker:rateCard] START rating=${rating}, session=`, this.session ? `idx=${this.session.currentIndex}, reviewed=${this.session.reviewedCount}` : 'null');
+		console.debug(
+			`[Anker:rateCard] START rating=${rating}, session=`,
+			this.session
+				? `idx=${this.session.currentIndex}, reviewed=${this.session.reviewedCount}`
+				: "null",
+		);
 		if (!this.session) {
 			console.debug(`[Anker:rateCard] ABORT: no session`);
 			return;
@@ -485,7 +511,9 @@ export class ReviewView extends ItemView {
 
 		const card = this.session.cards[this.session.currentIndex];
 		if (!card) {
-			console.debug(`[Anker:rateCard] ABORT: no card at index ${this.session.currentIndex}`);
+			console.debug(
+				`[Anker:rateCard] ABORT: no card at index ${this.session.currentIndex}`,
+			);
 			return;
 		}
 
@@ -494,13 +522,17 @@ export class ReviewView extends ItemView {
 		let newState: ReviewState | null = null;
 
 		if (file instanceof TFile) {
-			console.debug(`[Anker:rateCard] file found, running scheduler.review...`);
+			console.debug(
+				`[Anker:rateCard] file found, running scheduler.review...`,
+			);
 			const reviewResult = this.plugin.scheduler.review(
 				card.frontmatter._review,
 				rating,
 			);
 			newState = reviewResult.state;
-			console.debug(`[Anker:rateCard] newState due=${newState.due}, state=${newState.state}`);
+			console.debug(
+				`[Anker:rateCard] newState due=${newState.due}, state=${newState.state}`,
+			);
 			await this.plugin.cardService.updateReviewState(
 				file,
 				reviewResult.state,
@@ -513,26 +545,36 @@ export class ReviewView extends ItemView {
 			);
 			console.debug(`[Anker:rateCard] addEntry done`);
 		} else {
-			console.debug(`[Anker:rateCard] file NOT found or not TFile for path=${card.path}`);
+			console.debug(
+				`[Anker:rateCard] file NOT found or not TFile for path=${card.path}`,
+			);
 		}
 
-		const isDue = newState ? this.plugin.deckService.isReviewDue(newState) : null;
+		const isDue = newState
+			? this.plugin.deckService.isReviewDue(newState)
+			: null;
 		console.debug(`[Anker:rateCard] isDue=${isDue}`);
 		if (newState && !isDue) {
 			this.session.reviewedCount++;
-			console.debug(`[Anker:rateCard] reviewedCount incremented to ${this.session.reviewedCount}`);
+			console.debug(
+				`[Anker:rateCard] reviewedCount incremented to ${this.session.reviewedCount}`,
+			);
 		}
 
 		let nextDueCards = this.plugin.deckService.getDueCards(
 			this.session.deckPath,
 		);
-		console.debug(`[Anker:rateCard] nextDueCards from getDueCards: ${nextDueCards.length} cards: [${nextDueCards.map(c => c.path).join(', ')}]`);
+		console.debug(
+			`[Anker:rateCard] nextDueCards from getDueCards: ${nextDueCards.length} cards: [${nextDueCards.map((c) => c.path).join(", ")}]`,
+		);
 
 		if (newState && !isDue) {
 			nextDueCards = nextDueCards.filter(
 				(nextCard) => nextCard.path !== card.path,
 			);
-			console.debug(`[Anker:rateCard] filtered out ${card.path}, remaining: ${nextDueCards.length}`);
+			console.debug(
+				`[Anker:rateCard] filtered out ${card.path}, remaining: ${nextDueCards.length}`,
+			);
 		}
 
 		if (nextDueCards.length === 0) {
@@ -551,12 +593,16 @@ export class ReviewView extends ItemView {
 				? (currentIndexInNext + 1) % nextDueCards.length
 				: 0;
 
-		console.debug(`[Anker:rateCard] nextIndex=${nextIndex}, nextCard=${nextDueCards[nextIndex]?.path}`);
+		console.debug(
+			`[Anker:rateCard] nextIndex=${nextIndex}, nextCard=${nextDueCards[nextIndex]?.path}`,
+		);
 		this.session.cards = nextDueCards;
 		this.session.currentIndex = nextIndex;
 		await this.loadCurrentCard();
 		this.render();
-		console.debug(`[Anker:rateCard] END - render complete, reviewedCount=${this.session?.reviewedCount}`);
+		console.debug(
+			`[Anker:rateCard] END - render complete, reviewedCount=${this.session?.reviewedCount}`,
+		);
 	}
 
 	private async editCurrentCard() {
