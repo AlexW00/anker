@@ -89,7 +89,10 @@ describe("Review Progress & Settings", function () {
 		await browser.executeObsidian(({ app }) => {
 			// Access internal settings API (not public, so use type assertion)
 			const appWithSetting = app as unknown as {
-				setting: { open: () => void; openTabById: (id: string) => void };
+				setting: {
+					open: () => void;
+					openTabById: (id: string) => void;
+				};
 			};
 			appWithSetting.setting.open();
 			appWithSetting.setting.openTabById("anker");

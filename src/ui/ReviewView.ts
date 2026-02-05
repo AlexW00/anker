@@ -22,6 +22,8 @@ interface ReviewSession {
 	currentIndex: number;
 	currentSide: number;
 	totalSides: number;
+	initialTotal: number;
+	reviewedCount: number;
 }
 
 /**
@@ -130,6 +132,8 @@ export class ReviewView extends ItemView {
 			currentIndex: 0,
 			currentSide: 0,
 			totalSides: 0,
+			initialTotal: dueCards.length,
+			reviewedCount: 0,
 		};
 
 		// Reset state
@@ -233,15 +237,23 @@ export class ReviewView extends ItemView {
 		container.empty();
 
 		const progress =
-			(this.session.currentIndex / this.session.cards.length) * 100;
+			(Math.min(
+				this.session.reviewedCount,
+				this.session.initialTotal,
+			) /
+				this.session.initialTotal) * 100;
 		const progressBar = container.createDiv({
 			cls: "flashcard-progress-bar",
 		});
 		progressBar.createDiv({
 			cls: "flashcard-progress-fill",
 		}).style.width = `${progress}%`;
+		const displayIndex = Math.min(
+			this.session.reviewedCount + 1,
+			this.session.initialTotal,
+		);
 		container.createSpan({
-			text: `${this.session.currentIndex + 1} / ${this.session.cards.length}`,
+			text: `${displayIndex} / ${this.session.initialTotal}`,
 			cls: "flashcard-progress-text",
 		});
 		const menuButton = container.createDiv({
@@ -481,6 +493,8 @@ export class ReviewView extends ItemView {
 				reviewResult.logEntry,
 			);
 		}
+
+		this.session.reviewedCount++;
 
 		let nextDueCards = this.plugin.deckService.getDueCards(
 			this.session.deckPath,

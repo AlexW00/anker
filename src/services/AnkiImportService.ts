@@ -993,9 +993,7 @@ export class AnkiImportService {
 		}
 
 		// Build deck folder path (convert Anki separator to /)
-		const deckPath = deck.name
-			.split(ANKI_DECK_SEPARATOR)
-			.join("/");
+		const deckPath = deck.name.split(ANKI_DECK_SEPARATOR).join("/");
 		const fullDeckPath = `${destinationFolder}/${deckPath}`;
 		await this.ensureFolderExists(fullDeckPath);
 
