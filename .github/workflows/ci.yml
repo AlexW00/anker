@@ -3,8 +3,14 @@ name: CI
 on:
   push:
     branches: ["**"]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
   pull_request:
     branches: ["**"]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
 
 jobs:
   lint:
