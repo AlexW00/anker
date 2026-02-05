@@ -88,17 +88,12 @@ describe("Review Progress & Settings", function () {
 		const progressBefore = await getProgressText();
 		console.debug(`[DEBUG] Before reveal: progress="${progressBefore}"`);
 
-		// Reveal answer using JS click to avoid interception
+		// Reveal answer using WebDriver click
 		const revealButton = browser.$(
 			".flashcard-review .flashcard-btn-reveal",
 		);
 		await revealButton.waitForExist({ timeout: 5000 });
-		await browser.execute(() => {
-			const btn = document.querySelector(
-				".flashcard-review .flashcard-btn-reveal",
-			) as HTMLButtonElement;
-			btn?.click();
-		});
+		await revealButton.click();
 
 		// Wait for rating buttons container to appear
 		const ratingButtons = browser.$(".flashcard-rating-buttons");
@@ -110,22 +105,18 @@ describe("Review Progress & Settings", function () {
 		const questionBefore = await getCardQuestion();
 		console.debug(`[DEBUG] After reveal, before rating: question="${questionBefore.substring(0, 50)}...", clicking ${ratingClass}`);
 
-		// Click the rating button using JS with the class
-		const buttonFound = await browser.execute((cls: string) => {
-			const btn = document.querySelector<HTMLButtonElement>(
-				`${cls} button`,
-			);
-			if (btn) {
-				btn.click();
-				return true;
-			}
-			return false;
-		}, ratingClass);
-		console.debug(`[DEBUG] Rating button found and clicked: ${buttonFound}`);
+		// Click the rating button using WebDriver's click (not browser.execute)
+		// This is critical: Obsidian's ButtonComponent handlers require proper event dispatch
+		const ratingButton = browser.$(`${ratingClass} button`);
+		const buttonExists = await ratingButton.isExisting();
+		console.debug(`[DEBUG] Rating button exists: ${buttonExists}`);
 
-		if (!buttonFound) {
+		if (!buttonExists) {
 			throw new Error(`Rating button not found for selector: ${ratingClass} button`);
 		}
+
+		await ratingButton.click();
+		console.debug(`[DEBUG] Rating button clicked via WebDriver`);
 
 		// Wait for actual state change: either completion, different question (new card), or progress update
 		await browser.waitUntil(
