@@ -66,12 +66,17 @@ describe("Card Creation", function () {
 			await backInput.setValue("E2E Test Answer");
 		}
 
-		// Click create button using JS to avoid interception
+		// Click create button using JS to avoid click interception
 		const createButton = browser.$(
 			".modal-container .flashcard-buttons-right button.mod-cta",
 		);
 		if (await createButton.isExisting()) {
-			await browser.execute((el) => el.click(), createButton);
+			await browser.execute(() => {
+				const btn = document.querySelector(
+					".modal-container .flashcard-buttons-right button.mod-cta",
+				) as HTMLButtonElement;
+				btn?.click();
+			});
 		}
 
 		// Verify a new card file was created by checking the vault

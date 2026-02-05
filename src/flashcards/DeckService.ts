@@ -67,6 +67,7 @@ export class DeckService {
 		}
 
 		return {
+			id: (fm._id as string) ?? "",
 			path: file.path,
 			frontmatter: fm as FlashcardFrontmatter,
 		};

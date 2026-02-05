@@ -1,6 +1,7 @@
 import { App, TFile, stringifyYaml } from "obsidian";
 import type { Flashcard, FlashcardFrontmatter, ReviewState } from "../types";
 import { debugLog, PROTECTION_COMMENT } from "../types";
+import { generateUUID } from "../utils";
 import { TemplateService } from "./TemplateService";
 import { createEmptyCard } from "ts-fsrs";
 
@@ -105,6 +106,7 @@ export class CardService {
 		// Create system frontmatter (these always take precedence)
 		// User fields are spread at the top level, plugin properties are prefixed with _
 		const systemFrontmatter: FlashcardFrontmatter = {
+			_id: generateUUID(),
 			_type: "flashcard",
 			_template: `[[${template.path}]]`,
 			_review: this.createInitialReviewState(),
@@ -252,6 +254,7 @@ export class CardService {
 
 		// Build system frontmatter from current card (always takes precedence)
 		const systemFrontmatter: FlashcardFrontmatter = {
+			_id: fm._id ?? generateUUID(),
 			_type: "flashcard",
 			_template: fm._template,
 			_review: fm._review,
@@ -366,6 +369,7 @@ export class CardService {
 
 			// Build system frontmatter from current card (always takes precedence)
 			const systemFrontmatter: FlashcardFrontmatter = {
+				_id: fm._id ?? generateUUID(),
 				_type: "flashcard",
 				_template: `[[${template.path}]]`,
 				_review: fm._review,
@@ -516,6 +520,7 @@ export class CardService {
 		}
 
 		return {
+			id: (fm._id as string) ?? "",
 			path: file.path,
 			frontmatter: fm as FlashcardFrontmatter,
 		};

@@ -1,7 +1,6 @@
 ---
-_id: e2e-vocab-card-00000001
 _type: flashcard
-_template: "[[templates/vocab]]"
+_template: "[[templates/basic]]"
 _review:
     due: "2026-02-05T00:00:00.000Z"
     stability: 0
@@ -11,20 +10,14 @@ _review:
     reps: 0
     lapses: 0
     state: 0
-word: 食べる
-reading: たべる
-meaning: to eat
-example: 毎日野菜を食べます。
+front: What is the largest planet in the solar system?
+back: Jupiter
 ---
 
 <!-- flashcard-content: DO NOT EDIT BELOW - Edit the frontmatter above instead! -->
 
-## 食べる
-
-たべる
+What is the largest planet in the solar system?
 
 ---
 
-**Meaning:** to eat
-
-毎日野菜を食べます。
+Jupiter

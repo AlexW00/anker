@@ -12,6 +12,7 @@ import type { Deck, FlashcardTemplate } from "../types";
 import { TextareaSuggest } from "./TextareaSuggest";
 import type { DeckService } from "../flashcards/DeckService";
 import type { TemplateService } from "../flashcards/TemplateService";
+import { generateUUID } from "../utils";
 import {
 	ButtonRowComponent,
 	ProgressBarComponent,
@@ -22,17 +23,6 @@ import {
  * MIME type accept strings for all media types combined.
  */
 const ALL_MEDIA_ACCEPT = "image/*,video/*,audio/*";
-
-/**
- * Generate a UUID v4 string.
- */
-function generateUUID(): string {
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-		const r = (Math.random() * 16) | 0;
-		const v = c === "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-}
 
 /**
  * Options for the CardFormModal.

@@ -32,7 +32,7 @@ describe("Review Session", function () {
 		} catch {
 			return;
 		}
-		await browser.execute((el) => el.click(), suggestion);
+		await suggestion.click();
 	};
 
 	const closeDeckSelectorIfOpen = async () => {
@@ -79,7 +79,7 @@ describe("Review Session", function () {
 			".flashcard-dashboard .flashcard-deck-item button",
 		);
 		if (await studyButton.isExisting()) {
-			await browser.execute((el) => el.click(), studyButton);
+			await studyButton.click();
 
 			await waitForDeckSelectorOrReview();
 			await chooseFirstDeckIfPrompted();
@@ -108,7 +108,7 @@ describe("Review Session", function () {
 			".flashcard-review .flashcard-btn-reveal",
 		);
 		if (await revealButton.isExisting()) {
-			await browser.execute((el) => el.click(), revealButton);
+			await revealButton.click();
 		}
 
 		// Rate the card if rating buttons are present
@@ -116,7 +116,7 @@ describe("Review Session", function () {
 			".flashcard-review .flashcard-rating-buttons button",
 		);
 		if (await ratingButton.isExisting()) {
-			await browser.execute((el) => el.click(), ratingButton);
+			await ratingButton.click();
 		}
 
 		// Either still reviewing or completed - both are valid

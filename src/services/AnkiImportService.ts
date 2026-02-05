@@ -25,6 +25,7 @@ import {
 	type ConvertedTemplate,
 } from "./AnkiTemplateConverter";
 import type { TemplateService } from "../flashcards/TemplateService";
+import { generateUUID } from "../utils";
 import { createEmptyCard } from "ts-fsrs";
 
 /**
@@ -1010,6 +1011,7 @@ export class AnkiImportService {
 		// Create frontmatter with mapped review state from Anki
 		const reviewState = this.mapAnkiReviewState(ankiCard);
 		const frontmatter: FlashcardFrontmatter = {
+			_id: generateUUID(),
 			_type: "flashcard",
 			_template: `[[${templatePath}]]`,
 			_review: reviewState,

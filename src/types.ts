@@ -83,6 +83,7 @@ export interface ReviewLogEntry {
  * ```
  */
 export interface FlashcardFrontmatter {
+	_id: string; // Stable UUID v4 identifier, survives file renames
 	_type: "flashcard";
 	_template: string; // WikiLink to template file, e.g. "[[Templates/Vocab Card]]"
 	_review: ReviewState;
@@ -95,6 +96,7 @@ export interface FlashcardFrontmatter {
  * A flashcard with its file path and parsed frontmatter.
  */
 export interface Flashcard {
+	id: string; // Stable identifier from frontmatter._id
 	path: string;
 	frontmatter: FlashcardFrontmatter;
 }

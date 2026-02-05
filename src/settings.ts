@@ -303,6 +303,7 @@ export class AnkerSettingTab extends PluginSettingTab {
 						}
 					});
 				text.inputEl.rows = 3;
+				text.inputEl.style.resize = "vertical";
 			});
 
 		// Optimize parameters button

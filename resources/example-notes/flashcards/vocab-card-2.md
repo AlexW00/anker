@@ -1,5 +1,4 @@
 ---
-_id: e2e-vocab-card-00000001
 _type: flashcard
 _template: "[[templates/vocab]]"
 _review:
@@ -11,20 +10,20 @@ _review:
     reps: 0
     lapses: 0
     state: 0
-word: 食べる
-reading: たべる
-meaning: to eat
-example: 毎日野菜を食べます。
+word: 飲む
+reading: のむ
+meaning: to drink
+example: 水を飲みます。
 ---
 
 <!-- flashcard-content: DO NOT EDIT BELOW - Edit the frontmatter above instead! -->
 
-## 食べる
+## 飲む
 
-たべる
+のむ
 
 ---
 
-**Meaning:** to eat
+**Meaning:** to drink
 
-毎日野菜を食べます。
+水を飲みます。

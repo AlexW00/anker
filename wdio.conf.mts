@@ -14,7 +14,8 @@ const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
 };
 const minAppVersion = manifest.minAppVersion ?? "1.11.5";
 let defaultVersions = `${minAppVersion}/${minAppVersion} latest/latest`;
-if (await obsidianBetaAvailable({ cacheDir })) {
+const includeBeta = env.OBSIDIAN_INCLUDE_BETA === "true";
+if (includeBeta && (await obsidianBetaAvailable({ cacheDir }))) {
     defaultVersions += " latest-beta/latest";
 }
 const desktopVersions = await parseObsidianVersions(

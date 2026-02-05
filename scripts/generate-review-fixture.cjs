@@ -29,11 +29,25 @@ function generateReviewHistory() {
 		);
 	}
 
+	// Deterministic UUID-like generator for fixture stability
+	let uuidCounter = 0;
+	function deterministicId() {
+		uuidCounter++;
+		const hex = uuidCounter.toString(16).padStart(8, "0");
+		return `${hex}-0000-4000-8000-000000000000`;
+	}
+
+	// Map from card path to stable ID
+	const cardIds = {};
+
 	function entry(cardPath, rating, elapsed_days) {
+		if (!cardIds[cardPath]) {
+			cardIds[cardPath] = deterministicId();
+		}
 		const timestamp = currentDate.toISOString();
 		lines.push(
 			JSON.stringify({
-				cardPath,
+				cardId: cardIds[cardPath],
 				entry: { timestamp, rating, elapsed_days },
 			}),
 		);
@@ -252,15 +266,14 @@ console.log(`Generated ${lineCount} review log entries -> ${outputPath}`);
 // Verify: count unique cards and total reviews
 const data = {};
 for (const line of content.trim().split("\n")) {
-	const { cardPath } = JSON.parse(line);
-	data[cardPath] = (data[cardPath] || 0) + 1;
+	const { cardId } = JSON.parse(line);
+	data[cardId] = (data[cardId] || 0) + 1;
 }
 console.log(`Cards: ${Object.keys(data).length}, Total reviews: ${lineCount}`);
 
 // Show per-group breakdown
 const groups = {};
-for (const [path] of Object.entries(data)) {
-	const group = path.split("/").slice(0, 2).join("/");
-	groups[group] = (groups[group] || 0) + 1;
+for (const [id] of Object.entries(data)) {
+	groups[id] = (groups[id] || 0) + 1;
 }
 console.log("Groups:", groups);

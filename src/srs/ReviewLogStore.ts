@@ -10,10 +10,11 @@ const REVIEW_LOG_FILENAME = "review-history.jsonl";
 /**
  * Shape of the in-memory review history data.
  *
- * Keys are card file paths; values are arrays of review entries.
+ * Keys are stable card IDs (UUID v4 from frontmatter._id);
+ * values are arrays of review entries.
  */
 export interface ReviewLogData {
-	[cardPath: string]: ReviewLogEntry[];
+	[cardId: string]: ReviewLogEntry[];
 }
 
 /**
@@ -70,19 +71,19 @@ export class ReviewLogStore {
 	/**
 	 * Append a review log entry for a card.
 	 */
-	async addEntry(cardPath: string, entry: ReviewLogEntry): Promise<void> {
-		if (!this.data[cardPath]) {
-			this.data[cardPath] = [];
+	async addEntry(cardId: string, entry: ReviewLogEntry): Promise<void> {
+		if (!this.data[cardId]) {
+			this.data[cardId] = [];
 		}
-		this.data[cardPath].push(entry);
-		await this.appendEntry(cardPath, entry);
+		this.data[cardId].push(entry);
+		await this.appendEntry(cardId, entry);
 	}
 
 	/**
 	 * Get all entries for a specific card.
 	 */
-	getEntries(cardPath: string): ReviewLogEntry[] {
-		return this.data[cardPath] ?? [];
+	getEntries(cardId: string): ReviewLogEntry[] {
+		return this.data[cardId] ?? [];
 	}
 
 	/**
@@ -145,14 +146,14 @@ export class ReviewLogStore {
 			if (!trimmed) continue;
 			try {
 				const parsed = JSON.parse(trimmed) as {
-					cardPath?: string;
+					cardId?: string;
 					entry?: ReviewLogEntry;
 				};
-				if (!parsed.cardPath || !parsed.entry) continue;
-				if (!this.data[parsed.cardPath]) {
-					this.data[parsed.cardPath] = [];
+				if (!parsed.cardId || !parsed.entry) continue;
+				if (!this.data[parsed.cardId]) {
+					this.data[parsed.cardId] = [];
 				}
-				this.data[parsed.cardPath]!.push(parsed.entry);
+				this.data[parsed.cardId]!.push(parsed.entry);
 			} catch {
 				// Skip malformed lines to avoid failing the whole load.
 				continue;
@@ -162,9 +163,9 @@ export class ReviewLogStore {
 
 	private async writeFullJsonl(path: string): Promise<void> {
 		const lines: string[] = [];
-		for (const [cardPath, entries] of Object.entries(this.data)) {
+		for (const [cardId, entries] of Object.entries(this.data)) {
 			for (const entry of entries) {
-				lines.push(JSON.stringify({ cardPath, entry }));
+				lines.push(JSON.stringify({ cardId, entry }));
 			}
 		}
 		const content = lines.length > 0 ? `${lines.join("\n")}\n` : "";
@@ -172,11 +173,11 @@ export class ReviewLogStore {
 	}
 
 	private async appendEntry(
-		cardPath: string,
+		cardId: string,
 		entry: ReviewLogEntry,
 	): Promise<void> {
 		const path = this.filePath();
-		const line = `${JSON.stringify({ cardPath, entry })}\n`;
+		const line = `${JSON.stringify({ cardId, entry })}\n`;
 		const exists = await this.app.vault.adapter.exists(path);
 		if (!exists) {
 			await this.app.vault.adapter.write(path, line);

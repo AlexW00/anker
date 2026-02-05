@@ -477,7 +477,7 @@ export class ReviewView extends ItemView {
 			);
 			// Persist review log entry to centralized store
 			await this.plugin.reviewLogStore.addEntry(
-				card.path,
+				card.id,
 				reviewResult.logEntry,
 			);
 		}

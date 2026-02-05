@@ -51,14 +51,14 @@ function loadReviewFixture(): ReviewLogData {
 		if (!trimmed) continue;
 
 		const parsed = JSON.parse(trimmed) as {
-			cardPath: string;
+			cardId: string;
 			entry: ReviewLogEntry;
 		};
 
-		if (!data[parsed.cardPath]) {
-			data[parsed.cardPath] = [];
+		if (!data[parsed.cardId]) {
+			data[parsed.cardId] = [];
 		}
-		data[parsed.cardPath]!.push(parsed.entry);
+		data[parsed.cardId]!.push(parsed.entry);
 	}
 
 	return data;
@@ -124,8 +124,8 @@ describe("FsrsOptimizerService Integration", () => {
 		});
 
 		it("contains valid review entries with required fields", () => {
-			for (const [cardPath, entries] of Object.entries(reviewData)) {
-				expect(cardPath).toMatch(/\.md$/);
+			for (const [cardId, entries] of Object.entries(reviewData)) {
+				expect(cardId).toBeTruthy();
 				for (const entry of entries) {
 					expect(entry).toHaveProperty("timestamp");
 					expect(entry).toHaveProperty("rating");

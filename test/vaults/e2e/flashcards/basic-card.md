@@ -1,4 +1,5 @@
 ---
+_id: e2e-basic-card-00000001
 _type: flashcard
 _template: "[[templates/basic]]"
 _review:
