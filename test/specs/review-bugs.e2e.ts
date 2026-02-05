@@ -49,25 +49,35 @@ describe("Review Bugs", function () {
 		await reviewView.waitForExist({ timeout: 5000 });
 
 		// Get initial card count
-		const initialProgress = await browser.$(".flashcard-progress-text").getText();
+		const initialProgress = await browser
+			.$(".flashcard-progress-text")
+			.getText();
 		const initialMatch = initialProgress.match(/(\d+)\s*\/\s*(\d+)/);
-		const initialTotal = initialMatch ? parseInt(initialMatch[2] ?? "0", 10) : 0;
+		const initialTotal = initialMatch
+			? parseInt(initialMatch[2] ?? "0", 10)
+			: 0;
 
 		expect(initialTotal).toBeGreaterThan(0);
 
 		// Reveal answer
-		const revealButton = browser.$(".flashcard-review .flashcard-btn-reveal");
+		const revealButton = browser.$(
+			".flashcard-review .flashcard-btn-reveal",
+		);
 		if (await revealButton.isExisting()) {
 			await revealButton.click();
 		}
 
 		// Wait for rating buttons to appear
-		const ratingButtons = browser.$(".flashcard-review .flashcard-rating-buttons");
+		const ratingButtons = browser.$(
+			".flashcard-review .flashcard-rating-buttons",
+		);
 		await ratingButtons.waitForExist({ timeout: 3000 });
 
 		// Click "Hard" button (typically the second button, index 1)
 		// Hard on a new card should keep it due today
-		const hardButton = browser.$(".flashcard-review .flashcard-rating-buttons button:nth-child(2)");
+		const hardButton = browser.$(
+			".flashcard-review .flashcard-rating-buttons button:nth-child(2)",
+		);
 		if (await hardButton.isExisting()) {
 			await hardButton.click();
 		}
@@ -79,7 +89,9 @@ describe("Review Bugs", function () {
 		const stillInReview = await browser.$(".flashcard-review").isExisting();
 		if (stillInReview) {
 			// The session should still have cards
-			const newProgress = await browser.$(".flashcard-progress-text").getText();
+			const newProgress = await browser
+				.$(".flashcard-progress-text")
+				.getText();
 			const newMatch = newProgress.match(/(\d+)\s*\/\s*(\d+)/);
 			const newTotal = newMatch ? parseInt(newMatch[2] ?? "0", 10) : 0;
 
@@ -104,17 +116,23 @@ describe("Review Bugs", function () {
 		// Rate multiple cards with Again/Hard to keep them due
 		for (let i = 0; i < 2; i++) {
 			// Reveal answer
-			const revealButton = browser.$(".flashcard-review .flashcard-btn-reveal");
+			const revealButton = browser.$(
+				".flashcard-review .flashcard-btn-reveal",
+			);
 			if (await revealButton.isExisting()) {
 				await revealButton.click();
 			}
 
 			// Wait for rating buttons
-			const ratingButtons = browser.$(".flashcard-review .flashcard-rating-buttons");
+			const ratingButtons = browser.$(
+				".flashcard-review .flashcard-rating-buttons",
+			);
 			await ratingButtons.waitForExist({ timeout: 3000 });
 
 			// Click "Again" button (first button) - keeps card due
-			const againButton = browser.$(".flashcard-review .flashcard-rating-buttons button:first-child");
+			const againButton = browser.$(
+				".flashcard-review .flashcard-rating-buttons button:first-child",
+			);
 			if (await againButton.isExisting()) {
 				await againButton.click();
 			}
@@ -122,14 +140,18 @@ describe("Review Bugs", function () {
 			await browser.pause(300);
 
 			// Check if still in review
-			const stillInReview = await browser.$(".flashcard-review").isExisting();
+			const stillInReview = await browser
+				.$(".flashcard-review")
+				.isExisting();
 			if (!stillInReview) break;
 		}
 
 		// Check progress text shows reviews performed
 		const stillInReview = await browser.$(".flashcard-review").isExisting();
 		if (stillInReview) {
-			const progressText = await browser.$(".flashcard-progress-text").getText();
+			const progressText = await browser
+				.$(".flashcard-progress-text")
+				.getText();
 			// If more reviews performed than cards completed, it should show "X reviews"
 			// e.g., "0 / 7 completed (2 reviews)"
 			// The text should at minimum show the completed/total format
@@ -151,16 +173,24 @@ describe("Review Bugs", function () {
 		await reviewView.waitForExist({ timeout: 5000 });
 
 		// Get initial card count from progress text
-		const initialProgress = await browser.$(".flashcard-progress-text").getText();
+		const initialProgress = await browser
+			.$(".flashcard-progress-text")
+			.getText();
 		const initialMatch = initialProgress.match(/(\d+)\s*\/\s*(\d+)/);
-		const initialCompleted = initialMatch ? parseInt(initialMatch[1] ?? "0", 10) : 0;
-		const initialTotal = initialMatch ? parseInt(initialMatch[2] ?? "0", 10) : 0;
+		const initialCompleted = initialMatch
+			? parseInt(initialMatch[1] ?? "0", 10)
+			: 0;
+		const initialTotal = initialMatch
+			? parseInt(initialMatch[2] ?? "0", 10)
+			: 0;
 
 		expect(initialTotal).toBeGreaterThan(0);
 		expect(initialCompleted).toBe(0); // Should start at 0 completed
 
 		// Reveal answer
-		const revealButton = browser.$(".flashcard-review .flashcard-btn-reveal");
+		const revealButton = browser.$(
+			".flashcard-review .flashcard-btn-reveal",
+		);
 		if (await revealButton.isExisting()) {
 			await revealButton.click();
 		}
@@ -179,7 +209,9 @@ describe("Review Bugs", function () {
 				if (await completeEl.isExisting()) return true;
 
 				// Check if progress updated
-				const progressText = await browser.$(".flashcard-progress-text");
+				const progressText = await browser.$(
+					".flashcard-progress-text",
+				);
 				if (await progressText.isExisting()) {
 					const text = await progressText.getText();
 					const match = text.match(/(\d+)\s*\/\s*(\d+)/);

@@ -195,9 +195,7 @@ export class DeckService {
 				learnCount++;
 				// Check if this learning card is actually due
 				if (!this.isReviewDue(review)) {
-					learningNotDue.push(
-						`${card.path} (due=${review.due})`,
-					);
+					learningNotDue.push(`${card.path} (due=${review.due})`);
 				}
 			} else if (state === State.Relearning) {
 				const dueDate = new Date(review.due);

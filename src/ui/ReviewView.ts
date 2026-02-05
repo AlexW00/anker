@@ -269,9 +269,10 @@ export class ReviewView extends ItemView {
 		}).style.width = `${progress}%`;
 
 		// Show reviews performed along with cards completed
-		const reviewsText = this.session.reviewsPerformed > completedCount
-			? `${completedCount} / ${this.session.initialTotal} completed (${this.session.reviewsPerformed} reviews)`
-			: `${completedCount} / ${this.session.initialTotal} completed`;
+		const reviewsText =
+			this.session.reviewsPerformed > completedCount
+				? `${completedCount} / ${this.session.initialTotal} completed (${this.session.reviewsPerformed} reviews)`
+				: `${completedCount} / ${this.session.initialTotal} completed`;
 		container.createSpan({
 			text: reviewsText,
 			cls: "flashcard-progress-text",

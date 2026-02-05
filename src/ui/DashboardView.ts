@@ -426,7 +426,10 @@ export class DashboardView extends ItemView {
 									case "bigint":
 										return rawError.toString();
 									case "symbol":
-										return rawError.description ?? rawError.toString();
+										return (
+											rawError.description ??
+											rawError.toString()
+										);
 									case "undefined":
 										return "undefined";
 									case "function":
@@ -435,7 +438,9 @@ export class DashboardView extends ItemView {
 											: "[function]";
 									case "object":
 									default:
-										return Object.prototype.toString.call(rawError);
+										return Object.prototype.toString.call(
+											rawError,
+										);
 								}
 							}
 						})();

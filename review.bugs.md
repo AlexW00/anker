@@ -9,6 +9,7 @@ Analysis based on console logs from a review session with 5 cards.
 **Symptom**: After `updateReviewState()` writes new frontmatter to disk, immediately calling `getDueCards()` returns stale data from the metadata cache.
 
 **Evidence**:
+
 ```
 [Anker:rateCard] t=12ms updateReviewState done
 [Anker:rateCard] t=12ms metadataCache AFTER update (may be stale): {"due":"2026-02-05T23:02:08.567Z"...}
@@ -18,6 +19,7 @@ Analysis based on console logs from a review session with 5 cards.
 This happens on **every single rating** in the logs. The cache takes ~1 second to update, but we call `getDueCards()` within ~17ms.
 
 **Impact**:
+
 - Cards may reappear with stale scheduling data
 - Cards that are still due may be incorrectly excluded
 - Progress bar may not update correctly
@@ -29,6 +31,7 @@ This happens on **every single rating** in the logs. The cache takes ~1 second t
 **Symptom**: When rating a card "Hard" (or any rating that keeps it due today), the card disappears from the session instead of staying.
 
 **Evidence**:
+
 ```
 [Anker:rateCard] card=Anker/example-notes/flashcards/basic-card.md, sessionCards=4
 [Anker:rateCard] t=1ms newState due=2026-02-05T23:23:17.484Z, state=1
@@ -54,6 +57,7 @@ This happens on **every single rating** in the logs. The cache takes ~1 second t
 **Evidence**: This error appears after each card rating, triggered by `handleMetadataChange`.
 
 **Impact**:
+
 - Console spam with error messages
 - May interfere with review flow if not properly caught
 - Cards referencing missing templates cannot be regenerated
@@ -67,6 +71,7 @@ This happens on **every single rating** in the logs. The cache takes ~1 second t
 **Symptom**: Some cards have empty `_id` fields in frontmatter.
 
 **Evidence**:
+
 ```
 [Anker:rateCard] card=Anker/example-notes/flashcards/basic-card-3.md, id=, sessionCards=5
 [Anker:rateCard] card=Anker/example-notes/flashcards/basic-card.md, id=, sessionCards=4
@@ -74,6 +79,7 @@ This happens on **every single rating** in the logs. The cache takes ~1 second t
 ```
 
 **Impact**:
+
 - Review history entries saved with empty cardId cannot be linked back to cards
 - FSRS optimization may have incomplete data
 - Card identity is unstable (relies on file path instead)
@@ -85,6 +91,7 @@ This happens on **every single rating** in the logs. The cache takes ~1 second t
 **Symptom**: When a card is rated but remains due (e.g., Hard on a Learning card), `reviewedCount` is not incremented.
 
 **Evidence**:
+
 ```
 # First rating (Good on basic-card-3.md, not due anymore)
 [Anker:rateCard] isDue=false (based on newState, not cache)
@@ -103,22 +110,22 @@ The user reviewed a card but progress shows 1/5 instead of 2/5 because the card 
 
 ## Summary Table
 
-| Bug | Severity | Category | File(s) |
-|-----|----------|----------|---------|
-| Metadata cache race condition | Critical | Race Condition | ReviewView.ts, DeckService.ts |
-| Card disappears when still due | High | Logic Error | ReviewView.ts |
-| Auto-regeneration fails during review | Medium | Error Handling | CardRegenService.ts |
-| Missing card IDs | Medium | Data Integrity | Example cards / migration |
-| reviewedCount logic incorrect | Low | UX | ReviewView.ts |
+| Bug                                   | Severity | Category       | File(s)                       |
+| ------------------------------------- | -------- | -------------- | ----------------------------- |
+| Metadata cache race condition         | Critical | Race Condition | ReviewView.ts, DeckService.ts |
+| Card disappears when still due        | High     | Logic Error    | ReviewView.ts                 |
+| Auto-regeneration fails during review | Medium   | Error Handling | CardRegenService.ts           |
+| Missing card IDs                      | Medium   | Data Integrity | Example cards / migration     |
+| reviewedCount logic incorrect         | Low      | UX             | ReviewView.ts                 |
 
 ---
 
 ## Recommended Fixes
 
 1. **Bug 1 & 2**: Don't rely on `getDueCards()` after rating. Either:
-   - Wait for metadata cache to update before querying
-   - Maintain session state locally and only update cards we know about
-   - Read file content directly instead of using metadata cache
+    - Wait for metadata cache to update before querying
+    - Maintain session state locally and only update cards we know about
+    - Read file content directly instead of using metadata cache
 
 2. **Bug 3**: Skip auto-regeneration during active review, or catch template errors silently
 
