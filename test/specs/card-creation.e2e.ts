@@ -2,19 +2,21 @@ import { describe, it, beforeEach } from "mocha";
 import { browser, expect } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForVaultReady } from "../helpers/waitForVaultReady";
+import type { ObsidianAppLike } from "../helpers/obsidianTypes";
 
 describe("Card Creation", function () {
 	beforeEach(async function () {
 		// Reset vault state before each test
 		await obsidianPage.resetVault();
 		await browser.executeObsidian(async ({ app }) => {
+			const obsidianApp = app as ObsidianAppLike;
 			// Ensure a "flashcards" folder exists for deck service
-			if (!app.vault.getAbstractFileByPath("flashcards")) {
-				await app.vault.createFolder("flashcards");
+			if (!obsidianApp.vault.getAbstractFileByPath("flashcards")) {
+				await obsidianApp.vault.createFolder("flashcards");
 			}
 
 			// Configure settings to match test vault
-			const plugin = (app as any).plugins.getPlugin("anker");
+			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
 			if (plugin) {
 				plugin.settings.templateFolder = "templates";
 				await plugin.saveSettings();
@@ -76,9 +78,10 @@ describe("Card Creation", function () {
 		await browser.pause(1000); // Wait for file creation
 
 		const cardCreated = await browser.executeObsidian(({ app }) => {
-			const files = app.vault.getMarkdownFiles();
+			const obsidianApp = app as ObsidianAppLike;
+			const files = obsidianApp.vault.getMarkdownFiles();
 			return files.some((f) => {
-				const cache = app.metadataCache.getFileCache(f);
+				const cache = obsidianApp.metadataCache.getFileCache(f);
 				const fm = cache?.frontmatter;
 				return fm && fm["_type"] === "flashcard";
 			});

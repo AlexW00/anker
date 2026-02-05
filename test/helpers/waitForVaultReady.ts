@@ -1,17 +1,19 @@
 import { browser } from "@wdio/globals";
+import type { ObsidianAppLike } from "./obsidianTypes";
 
 export const waitForVaultReady = async () => {
 	await browser.waitUntil(
 		async () => {
 			return await browser.executeObsidian(({ app }) => {
-				const files = app.vault.getMarkdownFiles();
+				const obsidianApp = app as ObsidianAppLike;
+				const files = obsidianApp.vault.getMarkdownFiles();
 				if (files.length === 0) return false;
 
-				const plugin = (app as any).plugins?.getPlugin?.("anker");
+				const plugin = obsidianApp.plugins?.getPlugin?.("anker");
 				if (!plugin) return false;
 
 				return files.every((file) =>
-					Boolean(app.metadataCache.getFileCache(file)),
+					Boolean(obsidianApp.metadataCache.getFileCache(file)),
 				);
 			});
 		},
