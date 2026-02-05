@@ -563,20 +563,16 @@ export default class AnkerPlugin extends Plugin {
 					return;
 				}
 
-				new TemplateSelectorModal(
-					this.app,
-					templates,
-					(template) => {
-						const file = this.app.vault.getAbstractFileByPath(
-							template.path,
-						);
-						if (!(file instanceof TFile)) {
-							new Notice("Template file not found");
-							return;
-						}
-						void this.app.workspace.getLeaf().openFile(file);
-					},
-				).open();
+				new TemplateSelectorModal(this.app, templates, (template) => {
+					const file = this.app.vault.getAbstractFileByPath(
+						template.path,
+					);
+					if (!(file instanceof TFile)) {
+						new Notice("Template file not found");
+						return;
+					}
+					void this.app.workspace.getLeaf().openFile(file);
+				}).open();
 			});
 	}
 

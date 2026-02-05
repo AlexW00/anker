@@ -2,6 +2,7 @@ import { App, Modal, Notice, TFile } from "obsidian";
 import type { CardService } from "../flashcards/CardService";
 import {
 	ButtonRowComponent,
+	type CheckboxConfig,
 	ProgressBarComponent,
 	SelectableListComponent,
 	StatusTextComponent,
@@ -44,6 +45,7 @@ export class CardErrorsModal extends Modal {
 	private isRegenerating = false;
 	private isCancelled = false;
 	private isClosed = false; // Whether modal has been closed
+	private showCacheCheckbox = false;
 	private useCache = true;
 	private didComplete = false;
 
@@ -59,7 +61,7 @@ export class CardErrorsModal extends Modal {
 		this.onComplete = onComplete;
 	}
 
-	onOpen() {
+	async onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("flashcard-error-modal");
@@ -99,7 +101,23 @@ export class CardErrorsModal extends Modal {
 			},
 		);
 
+		this.showCacheCheckbox = await this.determineShowCacheCheckbox();
+
 		// Button row with cache checkbox and regenerate button
+		const checkboxes: CheckboxConfig[] = this.showCacheCheckbox
+			? [
+					{
+						label: "Cache AI results",
+						checked: this.useCache,
+						onChange: (checked: boolean) => {
+							this.useCache = checked;
+						},
+						tooltip:
+							"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
+					},
+			  ]
+			: [];
+
 		this.buttonRow = new ButtonRowComponent(contentEl, {
 			cancelText: "Close",
 			onCancel: () => this.handleCancel(),
@@ -107,17 +125,7 @@ export class CardErrorsModal extends Modal {
 			onSubmit: () => {
 				void this.handleRegenerate();
 			},
-			checkboxes: [
-				{
-					label: "Cache AI results",
-					checked: this.useCache,
-					onChange: (checked) => {
-						this.useCache = checked;
-					},
-					tooltip:
-						"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
-				},
-			],
+			checkboxes: checkboxes.length > 0 ? checkboxes : undefined,
 		});
 
 		// Progress bar (hidden initially)
@@ -150,6 +158,27 @@ export class CardErrorsModal extends Modal {
 		}
 
 		this.contentEl.empty();
+	}
+
+	private async determineShowCacheCheckbox(): Promise<boolean> {
+		const files = this.cardErrors
+			.map((item) => {
+				if (item.file) {
+					return item.file;
+				}
+				if (!item.path) {
+					return null;
+				}
+				const file = this.app.vault.getAbstractFileByPath(item.path);
+				return file instanceof TFile ? file : null;
+			})
+			.filter((file): file is TFile => Boolean(file));
+
+		if (files.length === 0) {
+			return false;
+		}
+
+		return this.cardService.anyCardsUseDynamicPipes(files);
 	}
 
 	/**
@@ -322,7 +351,12 @@ export class CardErrorsModal extends Modal {
 		this.selectableList?.setDisabled(isRegenerating);
 		this.buttonRow?.setSubmitDisabled(isRegenerating);
 		this.buttonRow?.setCancelText(isRegenerating ? "Cancel" : "Close");
-		this.buttonRow?.setCheckboxDisabled("Cache AI results", isRegenerating);
+		if (this.showCacheCheckbox) {
+			this.buttonRow?.setCheckboxDisabled(
+				"Cache AI results",
+				isRegenerating,
+			);
+		}
 
 		if (isRegenerating) {
 			this.buttonRow?.setSubmitText("Regenerating...");

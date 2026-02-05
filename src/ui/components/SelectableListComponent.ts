@@ -18,6 +18,8 @@ export interface SelectableListOptions<T> {
 	getDisplayName: (item: T) => string;
 	/** Optional function to get secondary text (shown after display name). */
 	getSecondaryText?: (item: T) => string;
+	/** Optional function to get indent level for an item (0 = no indent). */
+	getIndent?: (item: T) => number;
 	/** Number of items above which virtual scrolling is enabled. Defaults to 100. */
 	virtualScrollThreshold?: number;
 	/** Callback when selection changes. */
@@ -233,6 +235,14 @@ export class SelectableListComponent<T> {
 		// Guard against undefined (shouldn't happen but TypeScript requires it)
 		if (!selectableItem) {
 			return row;
+		}
+
+		// Apply indentation if getIndent is provided
+		if (this.options.getIndent) {
+			const indent = this.options.getIndent(selectableItem.item);
+			if (indent > 0) {
+				row.style.setProperty("--sl-indent", String(indent));
+			}
 		}
 
 		const checkbox = row.createEl("input", { type: "checkbox" });

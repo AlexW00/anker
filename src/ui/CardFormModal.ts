@@ -326,6 +326,9 @@ export class CardFormModal extends Modal {
 		contentEl.addClass("flashcard-card-modal");
 
 		const isEditMode = this.mode === "edit";
+		const showCacheCheckbox =
+			isEditMode &&
+			this.templateService.usesDynamicPipes(this.currentTemplate.content);
 
 		// Clean up suggests when re-rendering
 		this.deckSuggest?.destroy();
@@ -481,7 +484,7 @@ export class CardFormModal extends Modal {
 			});
 		}
 
-		if (isEditMode) {
+		if (showCacheCheckbox) {
 			checkboxes.push({
 				label: "Cache AI results",
 				checked: this.useCache,
@@ -603,6 +606,9 @@ export class CardFormModal extends Modal {
 
 	private applySubmittingState(): void {
 		const isEditMode = this.mode === "edit";
+		const showCacheCheckbox =
+			isEditMode &&
+			this.templateService.usesDynamicPipes(this.currentTemplate.content);
 		const buttonText = isEditMode ? "Saving..." : "Creating...";
 
 		this.buttonRow?.setSubmitDisabled(this.isSubmitting);
@@ -619,7 +625,7 @@ export class CardFormModal extends Modal {
 			);
 		}
 
-		if (isEditMode) {
+		if (showCacheCheckbox) {
 			this.buttonRow?.setCheckboxDisabled(
 				"Cache AI results",
 				this.isSubmitting,

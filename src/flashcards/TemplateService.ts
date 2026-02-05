@@ -291,6 +291,58 @@ export class TemplateService {
 	}
 
 	/**
+	 * Find invalid variable names used in the template.
+	 * Focuses on simple identifiers that include hyphens (e.g., {{ my-var }}).
+	 */
+	findInvalidVariables(templateContent: string): string[] {
+		const { body } = this.parseTemplateContent(templateContent);
+		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
+		const allVariablePatterns =
+			/\{\{\s*([^{}|]+?)(?:\s*\|[^}]*)?\s*\}\}/g;
+		const simpleToken = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+		const builtins = new Set([
+			"loop",
+			"super",
+			"self",
+			"true",
+			"false",
+			"none",
+		]);
+		const invalid = new Set<string>();
+
+		let match;
+		while ((match = allVariablePatterns.exec(contentWithoutComments)) !== null) {
+			const rawName = match[1]?.trim();
+			if (!rawName) {
+				continue;
+			}
+			if (builtins.has(rawName)) {
+				continue;
+			}
+			if (!simpleToken.test(rawName)) {
+				continue;
+			}
+			if (rawName.includes("-")) {
+				invalid.add(rawName);
+			}
+		}
+
+		return Array.from(invalid.values());
+	}
+
+	/**
+	 * Detect whether the template uses any dynamic pipe filters.
+	 * Strips frontmatter and HTML comments before testing.
+	 */
+	usesDynamicPipes(templateContent: string): boolean {
+		const { body } = this.parseTemplateContent(templateContent);
+		const contentWithoutComments = body.replace(/<!--[\s\S]*?-->/g, "");
+		return /\|\s*(askAi|generateImage|generateSpeech)\b/.test(
+			contentWithoutComments,
+		);
+	}
+
+	/**
 	 * Render a template with the given fields.
 	 * This is now async to support AI-powered filters.
 	 */

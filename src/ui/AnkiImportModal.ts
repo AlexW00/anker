@@ -344,6 +344,7 @@ export class AnkiImportModal extends Modal {
 					return nameParts[nameParts.length - 1] ?? sel.deck.name;
 				},
 				getSecondaryText: (sel) => `(${sel.noteCount} cards)`,
+				getIndent: (sel) => sel.depth,
 				onSelectionChange: () => this.updateImportButton(),
 				initiallySelected: true,
 				containerClass: "anki-import-decks",

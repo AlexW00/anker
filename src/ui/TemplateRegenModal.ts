@@ -4,6 +4,7 @@ import type { CardService } from "../flashcards/CardService";
 import { CardErrorsModal, type CardError } from "./CardErrorsModal";
 import {
 	ButtonRowComponent,
+	type CheckboxConfig,
 	ProgressBarComponent,
 	SelectableListComponent,
 	StatusTextComponent,
@@ -26,6 +27,7 @@ export class TemplateRegenModal extends Modal {
 	private template: FlashcardTemplate;
 	private cards: Flashcard[];
 	private cardService: CardService;
+	private showCacheCheckbox: boolean;
 	private onComplete?: (result: RegenResult) => void;
 
 	private isRegenerating = false;
@@ -45,12 +47,14 @@ export class TemplateRegenModal extends Modal {
 		template: FlashcardTemplate,
 		cards: Flashcard[],
 		cardService: CardService,
+		showCacheCheckbox: boolean,
 		onComplete?: (result: RegenResult) => void,
 	) {
 		super(app);
 		this.template = template;
 		this.cards = cards;
 		this.cardService = cardService;
+		this.showCacheCheckbox = showCacheCheckbox;
 		this.onComplete = onComplete;
 	}
 
@@ -98,6 +102,20 @@ export class TemplateRegenModal extends Modal {
 		});
 
 		// Button row with components
+		const checkboxes: CheckboxConfig[] = this.showCacheCheckbox
+			? [
+					{
+						label: "Cache AI results",
+						checked: this.useCache,
+						onChange: (checked: boolean) => {
+							this.useCache = checked;
+						},
+						tooltip:
+							"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
+					},
+			  ]
+			: [];
+
 		this.buttonRow = new ButtonRowComponent(contentEl, {
 			cancelText: "Cancel",
 			onCancel: () => this.handleCancel(),
@@ -105,17 +123,7 @@ export class TemplateRegenModal extends Modal {
 			onSubmit: () => {
 				void this.handleRegenerate();
 			},
-			checkboxes: [
-				{
-					label: "Cache AI results",
-					checked: this.useCache,
-					onChange: (checked) => {
-						this.useCache = checked;
-					},
-					tooltip:
-						"When enabled, AI filter results are cached and reused. Disable to force fresh AI generation.",
-				},
-			],
+			checkboxes: checkboxes.length > 0 ? checkboxes : undefined,
 		});
 
 		// Progress bar (hidden initially)
@@ -320,7 +328,12 @@ export class TemplateRegenModal extends Modal {
 		}
 
 		// Disable cache checkbox during regeneration
-		this.buttonRow?.setCheckboxDisabled("Cache AI results", isRegenerating);
+		if (this.showCacheCheckbox) {
+			this.buttonRow?.setCheckboxDisabled(
+				"Cache AI results",
+				isRegenerating,
+			);
+		}
 
 		// Disable checkboxes in selectable list during regeneration
 		this.selectableList?.setDisabled(isRegenerating);

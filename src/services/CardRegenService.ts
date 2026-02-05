@@ -403,6 +403,23 @@ export class CardRegenService {
 					return;
 				}
 
+				const invalidVariables =
+					this.templateService.findInvalidVariables(content);
+				if (invalidVariables.length > 0) {
+					const preview = invalidVariables
+						.slice(0, 3)
+						.map((name) => `"${name}"`)
+						.join(", ");
+					const extraCount =
+						invalidVariables.length > 3
+							? ` and ${invalidVariables.length - 3} more`
+							: "";
+					new Notice(
+						`Warning: Template "${fileBasename}" contains unsupported variable names: ${preview}${extraCount}. Variable names cannot contain hyphens; use underscores instead (e.g., my_var).`,
+						8000,
+					);
+				}
+
 				// Check if any cards use this template
 				const cards =
 					this.deckService.getFlashcardsByTemplate(filePath);
@@ -499,19 +516,24 @@ export class CardRegenService {
 		// Mark as regenerating (will be cleared when modal closes)
 		this.isRegeneratingAll = true;
 
+		const showCacheCheckbox = this.templateService.usesDynamicPipes(
+			template.content,
+		);
+
 		// Open the regeneration modal
 		const modal = new TemplateRegenModal(
 			this.app,
 			template,
 			cards,
 			this.cardService,
+			showCacheCheckbox,
 			(result) => {
 				// Clear the regenerating flag when modal closes
 				this.isRegeneratingAll = false;
 
 				// Show completion notice only for success
 				// CardErrorsModal handles errors (opened by TemplateRegenModal)
-				if (result.cardErrors.length === 0) {
+				if (!result.cancelled && result.cardErrors.length === 0) {
 					new Notice(
 						`Successfully regenerated ${result.successCount} card${result.successCount !== 1 ? "s" : ""}.`,
 					);

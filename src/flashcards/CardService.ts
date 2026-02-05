@@ -522,6 +522,54 @@ export class CardService {
 	}
 
 	/**
+	 * Check whether a single card's template uses dynamic pipes.
+	 */
+	async cardUsesDynamicPipes(file: TFile): Promise<boolean> {
+		const cache = this.app.metadataCache.getFileCache(file);
+		const fm = cache?.frontmatter as FlashcardFrontmatter | undefined;
+
+		if (fm?._type !== "flashcard" || !fm._template) {
+			return false;
+		}
+
+		const template = await this.templateService.loadTemplate(fm._template);
+		if (!template) {
+			return false;
+		}
+
+		return this.templateService.usesDynamicPipes(template.content);
+	}
+
+	/**
+	 * Check whether any card templates in the list use dynamic pipes.
+	 */
+	async anyCardsUseDynamicPipes(files: TFile[]): Promise<boolean> {
+		const templatePaths = new Set<string>();
+		for (const file of files) {
+			const cache = this.app.metadataCache.getFileCache(file);
+			const fm = cache?.frontmatter as
+				| FlashcardFrontmatter
+				| undefined;
+			if (fm?._type !== "flashcard" || !fm._template) {
+				continue;
+			}
+			templatePaths.add(fm._template);
+		}
+
+		for (const templatePath of templatePaths) {
+			const template = await this.templateService.loadTemplate(templatePath);
+			if (!template) {
+				continue;
+			}
+			if (this.templateService.usesDynamicPipes(template.content)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Extract user fields from frontmatter (all non-underscore prefixed properties).
 	 */
 	extractUserFields(fm: FlashcardFrontmatter): Record<string, string> {
