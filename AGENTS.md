@@ -29,6 +29,7 @@ Obsidian community plugin for spaced repetition flashcards using FSRS. The plugi
 
 - **Lint**: `npm run lint`
 - **Typecheck**: `npm run typecheck`
+- **Test**: `npm test -- --run`
 - **Build (when needed)**: `npm run build`
 
 ## Key conventions
@@ -46,6 +47,13 @@ Obsidian community plugin for spaced repetition flashcards using FSRS. The plugi
 - Keep changes mobile-safe
 - Use Obsidian CSS variables for colors, fonts, spacing, etc. - don't create a "theme" for the plugin - it should look like a built in plugin.
 - Create re-usable components for repeated UI patterns (e.g. lists etc) so that the plugin looks consistent and shares code.
+- Write high value unit tests for logic that does not depend on the Obsidian API.
+
+## Testing guidelines
+
+- Add unit tests when you introduce or modify logic that can run without Obsidian.
+- Prefer Vitest unit tests colocated in [src/services/](src/services/) and [src/srs/](src/srs/).
+- Run `npm test -- --run` after making changes, along with lint and typecheck.
 
 ## Obsidian API reference
 
