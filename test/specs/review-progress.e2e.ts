@@ -67,14 +67,16 @@ describe("Review Progress & Settings", function () {
 	};
 
 	/**
-	 * Helper: get card content text for change detection.
+	 * Helper: get the first line of card content (the question) for change detection.
+	 * Using only the question avoids false positives when the answer is revealed.
 	 */
-	const getCardContent = async (): Promise<string> => {
-		const content = await browser.execute(() => {
-			const cardEl = document.querySelector(".flashcard-card");
-			return cardEl?.textContent ?? "";
+	const getCardQuestion = async (): Promise<string> => {
+		const question = await browser.execute(() => {
+			// Get the first flashcard-card-content div (the question side)
+			const contentEl = document.querySelector(".flashcard-card .flashcard-card-content");
+			return contentEl?.textContent?.trim() ?? "";
 		});
-		return content;
+		return question;
 	};
 
 	/**
@@ -82,10 +84,9 @@ describe("Review Progress & Settings", function () {
 	 * @param ratingClass e.g. ".flashcard-btn-good", ".flashcard-btn-again"
 	 */
 	const revealAndRate = async (ratingClass: string) => {
-		// Capture current card content and progress BEFORE rating for change detection
-		const contentBefore = await getCardContent();
+		// Capture progress BEFORE rating
 		const progressBefore = await getProgressText();
-		console.debug(`[DEBUG] Before rating: progress="${progressBefore}", content="${contentBefore.substring(0, 50)}..."`);
+		console.debug(`[DEBUG] Before reveal: progress="${progressBefore}"`);
 
 		// Reveal answer using JS click to avoid interception
 		const revealButton = browser.$(
@@ -102,20 +103,31 @@ describe("Review Progress & Settings", function () {
 		// Wait for rating buttons container to appear
 		const ratingButtons = browser.$(".flashcard-rating-buttons");
 		await ratingButtons.waitForExist({ timeout: 5000 });
-		console.debug(`[DEBUG] Rating buttons visible, clicking ${ratingClass}`);
+
+		// Capture the QUESTION content AFTER reveal but BEFORE rating
+		// This is key: revealing adds the answer, so we need to compare questions
+		// to detect when we move to a new card
+		const questionBefore = await getCardQuestion();
+		console.debug(`[DEBUG] After reveal, before rating: question="${questionBefore.substring(0, 50)}...", clicking ${ratingClass}`);
 
 		// Click the rating button using JS with the class
-		await browser.execute((cls: string) => {
-			const btn = document.querySelector(
+		const buttonFound = await browser.execute((cls: string) => {
+			const btn = document.querySelector<HTMLButtonElement>(
 				`${cls} button`,
-			) as HTMLButtonElement;
-			console.debug(`[DEBUG] Found rating button:`, btn);
-			btn?.click();
+			);
+			if (btn) {
+				btn.click();
+				return true;
+			}
+			return false;
 		}, ratingClass);
+		console.debug(`[DEBUG] Rating button found and clicked: ${buttonFound}`);
 
-		// Wait for actual state change: either completion, card content change, or progress update
-		// This fixes a race condition where the reveal button selector matches immediately
-		// because the old card is still displayed while rateCard() processes asynchronously
+		if (!buttonFound) {
+			throw new Error(`Rating button not found for selector: ${ratingClass} button`);
+		}
+
+		// Wait for actual state change: either completion, different question (new card), or progress update
 		await browser.waitUntil(
 			async () => {
 				// Check if session completed
@@ -125,10 +137,10 @@ describe("Review Progress & Settings", function () {
 					return true;
 				}
 
-				// Check if card content changed (we moved to next card)
-				const contentAfter = await getCardContent();
-				if (contentAfter !== contentBefore) {
-					console.debug(`[DEBUG] Card content changed to: "${contentAfter.substring(0, 50)}..."`);
+				// Check if we moved to a new card (question changed)
+				const questionAfter = await getCardQuestion();
+				if (questionAfter !== questionBefore) {
+					console.debug(`[DEBUG] Card changed to: "${questionAfter.substring(0, 50)}..."`);
 					return true;
 				}
 
@@ -141,7 +153,7 @@ describe("Review Progress & Settings", function () {
 
 				return false;
 			},
-			{ timeout: 10000, interval: 100, timeoutMsg: `Rating did not cause state change. Content before: "${contentBefore.substring(0, 50)}"` },
+			{ timeout: 10000, interval: 100, timeoutMsg: `Rating did not cause state change. Question: "${questionBefore.substring(0, 50)}"` },
 		);
 
 		// Additional small delay to ensure render completes
