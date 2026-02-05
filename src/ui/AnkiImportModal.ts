@@ -136,31 +136,47 @@ export class AnkiImportModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass("anki-import-modal");
+		contentEl.addClass("flashcard-card-modal");
+		this.modalEl.addClass("flashcard-modal-container");
 
-		// Header
-		contentEl.createEl("h2", { text: "Import Anki backup" });
-		contentEl.createDiv({ cls: "anki-import-separator" });
+		// 1. Sticky Header
+		const headerContainer = contentEl.createDiv({
+			cls: "flashcard-modal-sticky-header",
+		});
+		headerContainer.createEl("h2", {
+			text: "Import Anki backup",
+			cls: "flashcard-modal-header-row", // consistent styling
+		});
+
+		// 2. Scrollable Content
+		const scrollContainer = contentEl.createDiv({
+			cls: "flashcard-modal-scroll-content",
+		});
 
 		// File picker section
-		this.renderFilePicker(contentEl);
+		this.renderFilePicker(scrollContainer);
 
 		// Deck list container (populated after file is selected)
-		this.deckListContainer = contentEl.createDiv({
+		this.deckListContainer = scrollContainer.createDiv({
 			cls: "anki-import-deck-list",
 		});
 		this.deckListContainer.addClass("anki-import-deck-list-hidden");
 
 		// Destination folder selector
-		this.renderFolderSelector(contentEl);
+		this.renderFolderSelector(scrollContainer);
+
+		// 3. Sticky Footer
+		const footerContainer = contentEl.createDiv({
+			cls: "flashcard-modal-sticky-footer",
+		});
 
 		// Progress bar (hidden initially)
-		this.progressBar = new ProgressBarComponent(contentEl, {
+		this.progressBar = new ProgressBarComponent(footerContainer, {
 			containerClass: "anki-import-progress",
 		});
 
 		// Button row
-		this.buttonRow = new ButtonRowComponent(contentEl, {
+		this.buttonRow = new ButtonRowComponent(footerContainer, {
 			cancelText: "Cancel",
 			onCancel: () => this.close(),
 			submitText: "Import",
@@ -378,7 +394,7 @@ export class AnkiImportModal extends Modal {
 				this.lastSelectedDeckIds.has(item.deck.id) &&
 				!selectedItems.some(
 					(selected) => selected.deck.id === item.deck.id,
-					),
+				),
 		);
 
 		if (newlySelected.length > 0) {
