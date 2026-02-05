@@ -1,4 +1,5 @@
 ---
+_id: "b2c3d4e5-2222-4000-8000-000000000002"
 _type: flashcard
 _template: "[[templates/vocab]]"
 _review:

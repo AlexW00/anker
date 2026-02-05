@@ -1,4 +1,5 @@
 ---
+_id: "a1b2c3d4-1111-4000-8000-000000000001"
 _type: flashcard
 _template: "[[templates/basic]]"
 _review:

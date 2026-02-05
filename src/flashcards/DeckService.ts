@@ -1,4 +1,4 @@
-import { App, TFile, TFolder } from "obsidian";
+import { App, TFile, TFolder, parseYaml } from "obsidian";
 import type {
 	Deck,
 	DeckStats,
@@ -80,6 +80,51 @@ export class DeckService {
 	}
 
 	/**
+	 * Parse a flashcard file by reading content directly from disk.
+	 * Use this when you need fresh data immediately after a file write,
+	 * as metadataCache may be stale.
+	 */
+	async parseFlashcardFresh(file: TFile): Promise<Flashcard | null> {
+		try {
+			const content = await this.app.vault.read(file);
+			const fm = this.parseFrontmatterFromContent(content);
+
+			if (fm?._type !== "flashcard") {
+				return null;
+			}
+
+			return {
+				id: (fm._id as string) ?? "",
+				path: file.path,
+				frontmatter: fm as FlashcardFrontmatter,
+			};
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * Parse frontmatter from raw file content.
+	 */
+	private parseFrontmatterFromContent(
+		content: string,
+	): Record<string, unknown> | null {
+		const fmMatch = content.match(
+			/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n[\s\S]*)?$/,
+		);
+		if (!fmMatch) {
+			return null;
+		}
+
+		const yamlContent = fmMatch[1] ?? "";
+		try {
+			return parseYaml(yamlContent) as Record<string, unknown>;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * Get all flashcards in a folder (recursively).
 	 */
 	getFlashcardsInFolder(folderPath: string): Flashcard[] {
@@ -133,6 +178,9 @@ export class DeckService {
 		let relearnCount = 0;
 		let reviewCount = 0;
 
+		// Track cards for debugging
+		const learningNotDue: string[] = [];
+
 		for (const card of flashcards) {
 			const review = card.frontmatter._review;
 			if (!review) {
@@ -145,6 +193,12 @@ export class DeckService {
 				newCount++;
 			} else if (state === State.Learning) {
 				learnCount++;
+				// Check if this learning card is actually due
+				if (!this.isReviewDue(review)) {
+					learningNotDue.push(
+						`${card.path} (due=${review.due})`,
+					);
+				}
 			} else if (state === State.Relearning) {
 				const dueDate = new Date(review.due);
 				if (this.isDueToday(dueDate)) {
@@ -156,6 +210,15 @@ export class DeckService {
 					reviewCount++;
 				}
 			}
+		}
+
+		// Log if there are learning cards that are not due today
+		if (learningNotDue.length > 0) {
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:calculateStats] BUG DETECTED: ${learningNotDue.length} Learning cards counted but NOT due today:`,
+				learningNotDue,
+			);
 		}
 
 		return {
@@ -231,6 +294,48 @@ export class DeckService {
 		console.debug(
 			`[Anker:getDueCards] dueCards=${dueCards.length}: [${dueCards.map((c) => c.path).join(", ")}]`,
 		);
+		return dueCards.sort(
+			(a, b) =>
+				this.getCardDueDate(a).getTime() -
+				this.getCardDueDate(b).getTime(),
+		);
+	}
+
+	/**
+	 * Get cards due for review by reading file content directly.
+	 * Use this after updating a card to avoid stale metadata cache.
+	 */
+	async getDueCardsFresh(deckPath: string): Promise<Flashcard[]> {
+		const folder = this.app.vault.getAbstractFileByPath(deckPath);
+		if (!(folder instanceof TFolder)) {
+			return [];
+		}
+
+		const files: TFile[] = [];
+		const collectFiles = (f: TFolder) => {
+			for (const child of f.children) {
+				if (child instanceof TFile && child.extension === "md") {
+					files.push(child);
+				} else if (child instanceof TFolder) {
+					collectFiles(child);
+				}
+			}
+		};
+		collectFiles(folder);
+
+		const flashcards: Flashcard[] = [];
+		for (const file of files) {
+			const card = await this.parseFlashcardFresh(file);
+			if (card) {
+				flashcards.push(card);
+			}
+		}
+
+		const dueCards = flashcards.filter((card) => {
+			const review = card.frontmatter._review;
+			return this.isReviewDue(review);
+		});
+
 		return dueCards.sort(
 			(a, b) =>
 				this.getCardDueDate(a).getTime() -

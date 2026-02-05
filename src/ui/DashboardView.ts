@@ -308,10 +308,37 @@ export class DashboardView extends ItemView {
 				});
 			}
 
-			const dueCount = this.plugin.deckService.getDueCards(
-				deck.path,
-			).length;
+			const dueCards = this.plugin.deckService.getDueCards(deck.path);
+			const dueCount = dueCards.length;
 			const hasDueCards = dueCount > 0;
+
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:Dashboard] deck=${deck.path} stats:`,
+				JSON.stringify(deck.stats),
+				`dueCount=${dueCount}, hasDueCards=${hasDueCards}`,
+			);
+			// Log discrepancy between stats and getDueCards
+			const statsTotal =
+				deck.stats.new +
+				deck.stats.learn +
+				deck.stats.relearn +
+				deck.stats.review;
+			if (statsTotal > 0 && !hasDueCards) {
+				// eslint-disable-next-line no-console
+				console.log(
+					`[Anker:Dashboard] DISCREPANCY: deck=${deck.path} has statsTotal=${statsTotal} but dueCount=0`,
+				);
+				// eslint-disable-next-line no-console
+				console.log(
+					`[Anker:Dashboard] getDueCards returned:`,
+					dueCards.map((c) => ({
+						path: c.path,
+						due: c.frontmatter._review?.due,
+						state: c.frontmatter._review?.state,
+					})),
+				);
+			}
 
 			// Actions
 			const actionsEl = deckEl.createDiv({

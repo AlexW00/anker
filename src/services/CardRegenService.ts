@@ -122,6 +122,13 @@ export class CardRegenService {
 		const frontmatterHash = JSON.stringify(rest);
 		const cachedHash = this.frontmatterCache.get(file.path);
 
+		// First encounter: just populate cache without regenerating
+		// This prevents regeneration when only _review changes (e.g., during review)
+		if (cachedHash === undefined) {
+			this.frontmatterCache.set(file.path, frontmatterHash);
+			return;
+		}
+
 		// Skip if frontmatter hasn't changed
 		if (frontmatterHash === cachedHash) {
 			return;

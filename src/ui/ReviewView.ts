@@ -24,6 +24,7 @@ interface ReviewSession {
 	totalSides: number;
 	initialTotal: number;
 	reviewedCount: number;
+	reviewsPerformed: number;
 }
 
 /**
@@ -120,11 +121,23 @@ export class ReviewView extends ItemView {
 	 */
 	async startSession(deckPath: string) {
 		const dueCards = this.plugin.deckService.getDueCards(deckPath);
-		console.debug(
+		// eslint-disable-next-line no-console
+		console.log(
 			`[Anker:startSession] deckPath=${deckPath}, dueCards=${dueCards.length}`,
+		);
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:startSession] cards:`,
+			dueCards.map((c) => ({
+				path: c.path,
+				due: c.frontmatter._review?.due,
+				state: c.frontmatter._review?.state,
+			})),
 		);
 
 		if (dueCards.length === 0) {
+			// eslint-disable-next-line no-console
+			console.log(`[Anker:startSession] no due cards, showing complete`);
 			this.renderComplete();
 			return;
 		}
@@ -137,6 +150,7 @@ export class ReviewView extends ItemView {
 			totalSides: 0,
 			initialTotal: dueCards.length,
 			reviewedCount: 0,
+			reviewsPerformed: 0,
 		};
 
 		// Reset state
@@ -253,8 +267,13 @@ export class ReviewView extends ItemView {
 		progressBar.createDiv({
 			cls: "flashcard-progress-fill",
 		}).style.width = `${progress}%`;
+
+		// Show reviews performed along with cards completed
+		const reviewsText = this.session.reviewsPerformed > completedCount
+			? `${completedCount} / ${this.session.initialTotal} completed (${this.session.reviewsPerformed} reviews)`
+			: `${completedCount} / ${this.session.initialTotal} completed`;
 		container.createSpan({
-			text: `${completedCount} / ${this.session.initialTotal} completed`,
+			text: reviewsText,
 			cls: "flashcard-progress-text",
 		});
 		const menuButton = container.createDiv({
@@ -498,54 +517,82 @@ export class ReviewView extends ItemView {
 	}
 
 	private async rateCard(rating: Rating) {
-		console.debug(
-			`[Anker:rateCard] START rating=${rating}, session=`,
+		const rateStartTime = Date.now();
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] START t=0ms rating=${rating}, session=`,
 			this.session
-				? `idx=${this.session.currentIndex}, reviewed=${this.session.reviewedCount}`
+				? `idx=${this.session.currentIndex}, reviewed=${this.session.reviewedCount}, initialTotal=${this.session.initialTotal}`
 				: "null",
 		);
 		if (!this.session) {
-			console.debug(`[Anker:rateCard] ABORT: no session`);
+			// eslint-disable-next-line no-console
+			console.log(`[Anker:rateCard] ABORT: no session`);
 			return;
 		}
 
 		const card = this.session.cards[this.session.currentIndex];
 		if (!card) {
-			console.debug(
+			// eslint-disable-next-line no-console
+			console.log(
 				`[Anker:rateCard] ABORT: no card at index ${this.session.currentIndex}`,
 			);
 			return;
 		}
 
-		console.debug(`[Anker:rateCard] card=${card.path}, id=${card.id}`);
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] card=${card.path}, id=${card.id}, sessionCards=${this.session.cards.length}`,
+		);
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] card frontmatter._review BEFORE:`,
+			JSON.stringify(card.frontmatter._review),
+		);
+
 		const file = this.app.vault.getAbstractFileByPath(card.path);
 		let newState: ReviewState | null = null;
 
 		if (file instanceof TFile) {
-			console.debug(
-				`[Anker:rateCard] file found, running scheduler.review...`,
+			// Check metadata cache state BEFORE update
+			const cacheBefore =
+				this.app.metadataCache.getFileCache(file)?.frontmatter;
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] t=${Date.now() - rateStartTime}ms metadataCache BEFORE update:`,
+				JSON.stringify(cacheBefore?._review),
 			);
+
 			const reviewResult = this.plugin.scheduler.review(
 				card.frontmatter._review,
 				rating,
 			);
 			newState = reviewResult.state;
-			console.debug(
-				`[Anker:rateCard] newState due=${newState.due}, state=${newState.state}`,
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] t=${Date.now() - rateStartTime}ms newState due=${newState.due}, state=${newState.state}`,
 			);
 			await this.plugin.cardService.updateReviewState(
 				file,
 				reviewResult.state,
 			);
-			console.debug(`[Anker:rateCard] updateReviewState done`);
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] t=${Date.now() - rateStartTime}ms updateReviewState done`,
+			);
+
 			// Persist review log entry to centralized store
 			await this.plugin.reviewLogStore.addEntry(
 				card.id,
 				reviewResult.logEntry,
 			);
-			console.debug(`[Anker:rateCard] addEntry done`);
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] t=${Date.now() - rateStartTime}ms addEntry done`,
+			);
 		} else {
-			console.debug(
+			// eslint-disable-next-line no-console
+			console.log(
 				`[Anker:rateCard] file NOT found or not TFile for path=${card.path}`,
 			);
 		}
@@ -553,32 +600,46 @@ export class ReviewView extends ItemView {
 		const isDue = newState
 			? this.plugin.deckService.isReviewDue(newState)
 			: null;
-		console.debug(`[Anker:rateCard] isDue=${isDue}`);
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] t=${Date.now() - rateStartTime}ms isDue=${isDue} (based on newState, not cache)`,
+		);
+
+		// Always increment reviewsPerformed when any rating is made
+		this.session.reviewsPerformed++;
+
 		if (newState && !isDue) {
 			this.session.reviewedCount++;
-			console.debug(
-				`[Anker:rateCard] reviewedCount incremented to ${this.session.reviewedCount}`,
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] reviewedCount incremented to ${this.session.reviewedCount}/${this.session.initialTotal}`,
 			);
 		}
 
-		let nextDueCards = this.plugin.deckService.getDueCards(
+		// Use fresh read from disk to avoid stale metadata cache
+		let nextDueCards = await this.plugin.deckService.getDueCardsFresh(
 			this.session.deckPath,
 		);
-		console.debug(
-			`[Anker:rateCard] nextDueCards from getDueCards: ${nextDueCards.length} cards: [${nextDueCards.map((c) => c.path).join(", ")}]`,
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] t=${Date.now() - rateStartTime}ms getDueCardsFresh returned ${nextDueCards.length} cards: [${nextDueCards.map((c) => c.path).join(", ")}]`,
 		);
 
 		if (newState && !isDue) {
 			nextDueCards = nextDueCards.filter(
 				(nextCard) => nextCard.path !== card.path,
 			);
-			console.debug(
-				`[Anker:rateCard] filtered out ${card.path}, remaining: ${nextDueCards.length}`,
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] filtered out ${card.path} (not due), remaining: ${nextDueCards.length}`,
 			);
 		}
 
 		if (nextDueCards.length === 0) {
-			console.debug(`[Anker:rateCard] no cards left, rendering complete`);
+			// eslint-disable-next-line no-console
+			console.log(
+				`[Anker:rateCard] t=${Date.now() - rateStartTime}ms no cards left, rendering complete`,
+			);
 			this.renderComplete();
 			return;
 		}
@@ -593,15 +654,17 @@ export class ReviewView extends ItemView {
 				? (currentIndexInNext + 1) % nextDueCards.length
 				: 0;
 
-		console.debug(
-			`[Anker:rateCard] nextIndex=${nextIndex}, nextCard=${nextDueCards[nextIndex]?.path}`,
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] t=${Date.now() - rateStartTime}ms nextIndex=${nextIndex}, nextCard=${nextDueCards[nextIndex]?.path}`,
 		);
 		this.session.cards = nextDueCards;
 		this.session.currentIndex = nextIndex;
 		await this.loadCurrentCard();
 		this.render();
-		console.debug(
-			`[Anker:rateCard] END - render complete, reviewedCount=${this.session?.reviewedCount}`,
+		// eslint-disable-next-line no-console
+		console.log(
+			`[Anker:rateCard] END - render complete, reviewedCount=${this.session?.reviewedCount}/${this.session?.initialTotal}, sessionCards=${this.session?.cards.length}`,
 		);
 	}
 
