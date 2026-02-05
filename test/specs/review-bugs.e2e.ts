@@ -208,8 +208,8 @@ describe("Review Bugs", function () {
 						const plugin =
 							obsidianApp.plugins?.getPlugin?.("anker");
 						if (!plugin?.deckService) return -1;
-						return plugin.deckService
-							.getDueCards("flashcards").length;
+						return plugin.deckService.getDueCards("flashcards")
+							.length;
 					},
 				);
 				return currentDueCount < initialDueCount;
@@ -217,8 +217,7 @@ describe("Review Bugs", function () {
 			{
 				timeout: 10000,
 				interval: 500,
-				timeoutMsg:
-					"Due card count did not decrease after rating Easy",
+				timeoutMsg: "Due card count did not decrease after rating Easy",
 			},
 		);
 	});
