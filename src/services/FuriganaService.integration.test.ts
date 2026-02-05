@@ -117,7 +117,9 @@ describe("Furigana Conversion Integration", () => {
 				const compressedData = readFileSync(filePath);
 
 				// Decompress gzip data using pako
-				const decompressed = pako.ungzip(new Uint8Array(compressedData));
+				const decompressed = pako.ungzip(
+					new Uint8Array(compressedData),
+				);
 				return decompressed.buffer;
 			},
 		};
@@ -192,7 +194,9 @@ describe("Furigana Conversion Integration", () => {
 		const reading = "かんじ";
 
 		it("should format as curly braces (default)", () => {
-			expect(formatFurigana(kanji, reading, "curly")).toBe("{漢字|かんじ}");
+			expect(formatFurigana(kanji, reading, "curly")).toBe(
+				"{漢字|かんじ}",
+			);
 		});
 
 		it("should format as ruby HTML", () => {
@@ -208,7 +212,9 @@ describe("Furigana Conversion Integration", () => {
 		});
 
 		it("should format with brackets", () => {
-			expect(formatFurigana(kanji, reading, "brackets")).toBe("漢字[かんじ]");
+			expect(formatFurigana(kanji, reading, "brackets")).toBe(
+				"漢字[かんじ]",
+			);
 		});
 	});
 
@@ -315,7 +321,9 @@ describe("Furigana Conversion Integration", () => {
 		it("should handle compound words", () => {
 			const result = convertToFurigana(tokenizer, "東京駅");
 			// Tokyo Station - may be tokenized as 東京 + 駅 or as one token
-			expect(result).toMatch(/\{東京\|とうきょう\}|\{東京駅\|とうきょうえき\}/);
+			expect(result).toMatch(
+				/\{東京\|とうきょう\}|\{東京駅\|とうきょうえき\}/,
+			);
 		});
 	});
 
