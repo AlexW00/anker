@@ -493,6 +493,18 @@ color: var(--color-red);
 color: var(--color-green);
 }
 
+.flashcard-stat-failed {
+color: var(--text-on-accent);
+background-color: var(--color-red);
+border-color: var(--color-red);
+}
+
+.flashcard-stat-failed:hover {
+background-color: var(--color-red);
+opacity: 0.9;
+text-decoration: underline;
+}
+
 .flashcard-deck-actions {
 display: flex;
 gap: var(--size-4-2);

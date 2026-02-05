@@ -6,6 +6,7 @@ import {
 	type FlashcardsPluginSettings,
 	type FlashcardsPluginState,
 	type FlashcardTemplate,
+	type Flashcard,
 	debugLog,
 } from "./types";
 import { TemplateService } from "./flashcards/TemplateService";
@@ -26,7 +27,9 @@ import {
 	showCardEditModal,
 } from "./ui/CardCreationFlow";
 import { OrphanAttachmentsModal } from "./ui/OrphanAttachmentsModal";
+import { FailedCardsModal, type FailedCard } from "./ui/FailedCardsModal";
 import { AnkiImportModal } from "./ui/AnkiImportModal";
+import { FailedCardsScopeModal } from "./ui/FailedCardsScopeModal";
 
 /** Key prefix for storing API keys in SecretStorage */
 const API_KEY_PREFIX = "anker-ai-api-key-";
@@ -378,6 +381,12 @@ export default class AnkerPlugin extends Plugin {
 				new Notice("AI response cache cleared");
 			},
 		});
+
+		this.addCommand({
+			id: "open-failed-cards",
+			name: "Show failed cards",
+			callback: () => this.openFailedCardsCommand(),
+		});
 	}
 
 	/**
@@ -621,5 +630,130 @@ export default class AnkerPlugin extends Plugin {
 			this.deckService,
 			this.settings,
 		).open();
+	}
+
+	/**
+	 * Command entry: open failed cards with smart defaults and scope selection.
+	 */
+	private openFailedCardsCommand(): void {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile) {
+			if (this.isDeckBaseFile(activeFile)) {
+				const deckPath = activeFile.parent?.path;
+				if (deckPath) {
+					this.openFailedCardsForDeck(deckPath);
+					return;
+				}
+			}
+			if (this.isTemplateFile(activeFile)) {
+				this.openFailedCardsForTemplate(activeFile.path);
+				return;
+			}
+		}
+
+		new FailedCardsScopeModal(this.app, this.deckService, (scope) => {
+			if (scope.type === "all") {
+				this.openFailedCardsForAll();
+				return;
+			}
+			if (scope.type === "deck") {
+				this.openFailedCardsForDeck(scope.path);
+				return;
+			}
+
+			void this.templateService
+				.getTemplates(this.settings.templateFolder)
+				.then((templates) => {
+					if (templates.length === 0) {
+						new Notice(
+							`No templates found in "${this.settings.templateFolder}".`,
+						);
+						return;
+					}
+					new TemplateSelectorModal(this.app, templates, (template) =>
+						this.openFailedCardsForTemplate(template.path),
+					).open();
+				});
+		}).open();
+	}
+
+	private openFailedCardsForAll(): void {
+		const cards = this.deckService.getAllFlashcards();
+		this.openFailedCardsFromCards(cards, "Zero failed cards found");
+	}
+
+	private openFailedCardsForDeck(deckPath: string): void {
+		const cards = this.deckService.getFlashcardsInFolder(deckPath);
+		this.openFailedCardsFromCards(
+			cards,
+			`Zero failed cards found in "${deckPath}"`,
+		);
+	}
+
+	private openFailedCardsForTemplate(templatePath: string): void {
+		const cards = this.deckService.getFlashcardsByTemplate(templatePath);
+		this.openFailedCardsFromCards(
+			cards,
+			"Zero failed cards found for this template",
+		);
+	}
+
+	/**
+	 * Build and open FailedCardsModal from a set of flashcards.
+	 */
+	private openFailedCardsFromCards(
+		cards: Flashcard[],
+		emptyMessage: string,
+	): void {
+		const failedCards = this.buildFailedCards(cards);
+
+		if (failedCards.length === 0) {
+			new Notice(emptyMessage);
+			return;
+		}
+
+		failedCards.sort((a, b) => (a.path ?? "").localeCompare(b.path ?? ""));
+
+		if (this.cardRegenService) {
+			this.cardRegenService.openFailedCardsModal(failedCards);
+			return;
+		}
+
+		new FailedCardsModal(this.app, failedCards, this.cardService).open();
+	}
+
+	private buildFailedCards(cards: Flashcard[]): FailedCard[] {
+		const failedCards: FailedCard[] = [];
+
+		for (const card of cards) {
+			const rawError = (card.frontmatter as Record<string, unknown>)
+				._error;
+			if (rawError === undefined || rawError === null) {
+				continue;
+			}
+			const errorMessage =
+				typeof rawError === "string"
+					? rawError
+					: (() => {
+							try {
+								return JSON.stringify(rawError);
+							} catch {
+								return String(rawError);
+							}
+						})();
+			const trimmedError = errorMessage.trim();
+			if (!trimmedError) {
+				continue;
+			}
+
+			const file = this.app.vault.getAbstractFileByPath(card.path);
+			failedCards.push({
+				file: file instanceof TFile ? file : null,
+				path: card.path,
+				error: trimmedError,
+			});
+		}
+
+		return failedCards;
 	}
 }

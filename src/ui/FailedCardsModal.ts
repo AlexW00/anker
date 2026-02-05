@@ -1,4 +1,4 @@
-import { App, Modal, TFile } from "obsidian";
+import { App, Modal, Notice, TFile } from "obsidian";
 import type { CardService } from "../flashcards/CardService";
 import {
 	ButtonRowComponent,
@@ -282,6 +282,12 @@ export class FailedCardsModal extends Modal {
 				failedCards,
 				cancelled: this.isCancelled,
 			};
+
+			if (!result.cancelled && failedCards.length === 0) {
+				new Notice(
+					`Successfully regenerated ${successCount} card${successCount !== 1 ? "s" : ""}.`,
+				);
+			}
 
 			// Guard against double-invocation (can happen if modal closed while regenerating)
 			if (!this.didComplete) {

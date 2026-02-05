@@ -1,14 +1,16 @@
 import {
 	ButtonComponent,
 	ItemView,
+	TFile,
 	WorkspaceLeaf,
 	setIcon,
 	debounce,
 } from "obsidian";
 import type AnkerPlugin from "../main";
-import type { Deck } from "../types";
+import type { Deck, Flashcard } from "../types";
 import { showCardCreationModal } from "./CardCreationFlow";
 import { DeckBaseViewService, type StateFilter } from "./DeckBaseViewService";
+import { FailedCardsModal, type FailedCard } from "./FailedCardsModal";
 
 export const DASHBOARD_VIEW_TYPE = "anker-dashboard";
 
@@ -283,6 +285,29 @@ export class DashboardView extends ItemView {
 				"review",
 			);
 
+			// Failed cards badge
+			const failedCards = this.getFailedCardsInDeck(deck.path);
+			if (failedCards.length > 0) {
+				const failedBadge = statsEl.createSpan({
+					text: `⚠️ ${failedCards.length} failed`,
+					cls: "flashcard-stat flashcard-stat-failed flashcard-stat-clickable",
+				});
+				failedBadge.setAttr("role", "button");
+				failedBadge.setAttr("tabindex", "0");
+				failedBadge.setAttr("title", "View failed cards");
+				failedBadge.setAttr("aria-label", "View failed cards");
+				failedBadge.addEventListener("click", (event) => {
+					event.stopPropagation();
+					this.openFailedCardsModal(failedCards);
+				});
+				failedBadge.addEventListener("keydown", (event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						this.openFailedCardsModal(failedCards);
+					}
+				});
+			}
+
 			const dueCount = this.plugin.deckService.getDueCards(
 				deck.path,
 			).length;
@@ -338,5 +363,61 @@ export class DashboardView extends ItemView {
 			() => this.plugin.saveState(),
 			{ onRefresh: () => this.render() },
 		);
+	}
+
+	/**
+	 * Get failed cards in a deck (cards with _error in frontmatter).
+	 */
+	private getFailedCardsInDeck(deckPath: string): FailedCard[] {
+		const cards = this.plugin.deckService.getFlashcardsInFolder(deckPath);
+		const failedCards: FailedCard[] = [];
+
+		for (const card of cards) {
+			const fm = card.frontmatter as unknown as Record<string, unknown>;
+			const rawError = fm._error;
+			if (rawError === undefined || rawError === null) {
+				continue;
+			}
+			const errorMessage =
+				typeof rawError === "string"
+					? rawError
+					: (() => {
+							try {
+								return JSON.stringify(rawError);
+							} catch {
+								return String(rawError);
+							}
+						})();
+			const trimmedError = errorMessage.trim();
+			if (!trimmedError) {
+				continue;
+			}
+
+			const file = this.app.vault.getAbstractFileByPath(card.path);
+			failedCards.push({
+				file: file instanceof TFile ? file : null,
+				path: card.path,
+				error: trimmedError,
+			});
+		}
+
+		return failedCards;
+	}
+
+	/**
+	 * Open the FailedCardsModal for a set of failed cards.
+	 */
+	private openFailedCardsModal(failedCards: FailedCard[]): void {
+		if (failedCards.length === 0) return;
+
+		new FailedCardsModal(
+			this.app,
+			failedCards,
+			this.plugin.cardService,
+			() => {
+				// Refresh dashboard after modal closes
+				void this.render();
+			},
+		).open();
 	}
 }

@@ -540,15 +540,6 @@ export class CardRegenService {
 			(result) => {
 				// Clear the regenerating flag when modal closes
 				this.isRegeneratingAll = false;
-
-				// Show completion notice only for success, not for failures
-				// (FailedCardsModal handles showing itself again for remaining failures)
-				if (result.failedCards.length === 0) {
-					new Notice(
-						`Successfully regenerated ${result.successCount} card${result.successCount !== 1 ? "s" : ""}.`,
-					);
-				}
-				// Don't show notice for failures - FailedCardsModal will open again
 			},
 		);
 
