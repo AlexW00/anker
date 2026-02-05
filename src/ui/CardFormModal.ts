@@ -211,6 +211,7 @@ export class CardFormModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("flashcard-card-modal");
+		this.modalEl.addClass("flashcard-modal-container");
 
 		if (!this.keydownHandler) {
 			this.keydownHandler = (event: KeyboardEvent) => {
