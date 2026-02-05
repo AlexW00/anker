@@ -204,23 +204,28 @@ describe("Review Bugs", function () {
 		// Wait for the UI to update - either progress changes or review completes
 		await browser.waitUntil(
 			async () => {
-				// Check if review completed
-				const completeEl = browser.$(".flashcard-complete");
-				if (await completeEl.isExisting()) return true;
+				try {
+					// Check if review completed
+					const completeEl = browser.$(".flashcard-complete");
+					if (await completeEl.isExisting()) return true;
 
-				// Check if progress updated
-				const progressText = browser.$(".flashcard-progress-text");
-				if (await progressText.isExisting()) {
-					const text = await progressText.getText();
-					const match = text.match(/(\d+)\s*\/\s*(\d+)/);
-					const completed = match ? parseInt(match[1] ?? "0", 10) : 0;
-					return completed > initialCompleted;
+					// Check if progress updated (may throw stale element on re-render)
+					const progressText = browser.$(".flashcard-progress-text");
+					if (await progressText.isExisting()) {
+						const text = await progressText.getText();
+						const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+						const completed = match ? parseInt(match[1] ?? "0", 10) : 0;
+						return completed > initialCompleted;
+					}
+					return false;
+				} catch {
+					// Stale element during re-render - retry on next interval
+					return false;
 				}
-				return false;
 			},
 			{
-				timeout: 5000,
-				interval: 200,
+				timeout: 10000,
+				interval: 300,
 				timeoutMsg: "Progress did not update after rating Easy",
 			},
 		);
