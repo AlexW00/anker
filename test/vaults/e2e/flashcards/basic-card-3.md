@@ -3,7 +3,7 @@ _id: e2e-basic-card-00000003
 _type: flashcard
 _template: "[[templates/basic]]"
 _review:
-    due: "2026-02-05T00:00:00.000Z"
+    due: "2020-01-01T00:00:00.000Z"
     stability: 0
     difficulty: 0
     elapsed_days: 0

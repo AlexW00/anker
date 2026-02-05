@@ -9,6 +9,7 @@
 		"typecheck": "tsc -noEmit",
 		"build": "tsc -p tsconfig.build.json -noEmit && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"release": "npm version --message \"chore(release): v%s\" && git push && git push --tags",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"test": "vitest run",
