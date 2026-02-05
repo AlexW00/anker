@@ -13,7 +13,6 @@ import type AnkerPlugin from "../main";
 import type { Flashcard, ReviewState } from "../types";
 import { Rating } from "../srs/Scheduler";
 import { registerReviewHotkeys } from "./ReviewHotkeys";
-import { waitForMetadataCacheUpdate } from "../utils";
 
 export const REVIEW_VIEW_TYPE = "anker-review";
 
@@ -539,9 +538,6 @@ export class ReviewView extends ItemView {
 				reviewResult.state,
 			);
 			console.debug(`[Anker:rateCard] updateReviewState done`);
-			// Wait for metadataCache to sync before querying due cards
-			await waitForMetadataCacheUpdate(this.app, file.path);
-			console.debug(`[Anker:rateCard] metadataCache synced`);
 			// Persist review log entry to centralized store
 			await this.plugin.reviewLogStore.addEntry(
 				card.id,
