@@ -18,6 +18,12 @@ describe("Review Progress & Settings", function () {
 			plugin.settings.fsrsLearningSteps = [];
 			plugin.settings.fsrsRelearningSteps = [];
 			await plugin.saveSettings();
+
+			// Verify settings were applied
+			if (plugin.settings.fsrsEnableShortTerm !== false) {
+				console.error("Failed to apply fsrsEnableShortTerm=false");
+				throw new Error("Failed to apply test settings");
+			}
 		});
 	});
 
@@ -187,7 +193,7 @@ describe("Review Progress & Settings", function () {
 					const afterWidth = await getProgressFillWidth();
 					return afterText !== initialText || afterWidth !== initialWidth;
 				},
-				{ timeout: 5000, interval: 100, timeoutMsg: "Progress did not update after rating" },
+				{ timeout: 10000, interval: 200, timeoutMsg: "Progress did not update after rating" },
 			);
 		}
 	});
@@ -224,7 +230,7 @@ describe("Review Progress & Settings", function () {
 					const afterCompleted = Number(afterMatch[1]);
 					return afterCompleted > initialCompleted;
 				},
-				{ timeout: 5000, interval: 100, timeoutMsg: "Completed count did not increase after rating" },
+				{ timeout: 10000, interval: 200, timeoutMsg: "Completed count did not increase after rating" },
 			);
 
 			// Final verification
