@@ -53,9 +53,7 @@ function generateReviewHistory() {
 		for (let i = 0; i < count; i++) {
 			cardIndex++;
 			const path = `${prefix}/card-${String(cardIndex).padStart(4, "0")}.md`;
-			currentDate = new Date(
-				startDate.getTime() + cardIndex * 120000,
-			);
+			currentDate = new Date(startDate.getTime() + cardIndex * 120000);
 
 			// First review (always delta_t = 0)
 			entry(path, firstRating, 0);
@@ -63,15 +61,12 @@ function generateReviewHistory() {
 			// Second review at the specified delta_t
 			advanceDays(secondDeltaT);
 			const secondRating =
-				firstRating === 1
-					? [2, 3, 3][i % 3]
-					: [3, 3, 4][i % 3];
+				firstRating === 1 ? [2, 3, 3][i % 3] : [3, 3, 4][i % 3];
 			entry(path, secondRating, secondDeltaT);
 
 			// Additional reviews from the continuation pattern
 			if (continuations && continuations.length > 0) {
-				const pattern =
-					continuations[i % continuations.length];
+				const pattern = continuations[i % continuations.length];
 				for (const [deltaT, rating] of pattern) {
 					advanceDays(deltaT);
 					entry(path, rating, deltaT);
@@ -106,52 +101,143 @@ function generateReviewHistory() {
 
 	// Well-learned: Good start, consistent reviews
 	generateGroup("flashcards/train-steady", 30, 3, 1, [
-		[[3, 3], [7, 3], [15, 3]],
-		[[3, 3], [7, 4], [14, 3], [30, 3]],
-		[[2, 3], [5, 3], [10, 3], [25, 3]],
-		[[3, 3], [7, 3], [20, 4], [60, 3]],
+		[
+			[3, 3],
+			[7, 3],
+			[15, 3],
+		],
+		[
+			[3, 3],
+			[7, 4],
+			[14, 3],
+			[30, 3],
+		],
+		[
+			[2, 3],
+			[5, 3],
+			[10, 3],
+			[25, 3],
+		],
+		[
+			[3, 3],
+			[7, 3],
+			[20, 4],
+			[60, 3],
+		],
 	]);
 
 	// Struggling: Fail and recover
 	generateGroup("flashcards/train-struggle", 25, 1, 1, [
-		[[1, 3], [3, 1], [1, 3], [5, 3]],
-		[[1, 2], [2, 3], [4, 3], [10, 3]],
-		[[1, 3], [3, 2], [2, 3], [7, 3]],
+		[
+			[1, 3],
+			[3, 1],
+			[1, 3],
+			[5, 3],
+		],
+		[
+			[1, 2],
+			[2, 3],
+			[4, 3],
+			[10, 3],
+		],
+		[
+			[1, 3],
+			[3, 2],
+			[2, 3],
+			[7, 3],
+		],
 	]);
 
 	// Easy cards: High ratings
 	generateGroup("flashcards/train-easy", 20, 4, 4, [
-		[[15, 3], [30, 4]],
-		[[10, 4], [45, 3], [60, 4]],
-		[[20, 3], [40, 3]],
+		[
+			[15, 3],
+			[30, 4],
+		],
+		[
+			[10, 4],
+			[45, 3],
+			[60, 4],
+		],
+		[
+			[20, 3],
+			[40, 3],
+		],
 	]);
 
 	// Hard start, improving
 	generateGroup("flashcards/train-improve", 20, 2, 1, [
-		[[2, 3], [5, 3], [12, 3]],
-		[[1, 2], [3, 3], [7, 3], [15, 4]],
-		[[2, 3], [4, 3], [10, 3]],
+		[
+			[2, 3],
+			[5, 3],
+			[12, 3],
+		],
+		[
+			[1, 2],
+			[3, 3],
+			[7, 3],
+			[15, 4],
+		],
+		[
+			[2, 3],
+			[4, 3],
+			[10, 3],
+		],
 	]);
 
 	// Long retention: Good → long intervals
 	generateGroup("flashcards/train-longret", 20, 3, 3, [
-		[[7, 3], [20, 3], [45, 4], [90, 3]],
-		[[5, 3], [15, 3], [30, 3], [60, 3]],
-		[[10, 4], [30, 3], [60, 3]],
+		[
+			[7, 3],
+			[20, 3],
+			[45, 4],
+			[90, 3],
+		],
+		[
+			[5, 3],
+			[15, 3],
+			[30, 3],
+			[60, 3],
+		],
+		[
+			[10, 4],
+			[30, 3],
+			[60, 3],
+		],
 	]);
 
 	// Lapse pattern: Learning → Review → Lapse → Re-learn
 	generateGroup("flashcards/train-lapse", 20, 3, 1, [
-		[[3, 3], [7, 1], [1, 3], [5, 3], [12, 3]],
-		[[2, 3], [5, 1], [1, 2], [3, 3], [8, 3]],
-		[[4, 3], [10, 1], [1, 3], [4, 3]],
+		[
+			[3, 3],
+			[7, 1],
+			[1, 3],
+			[5, 3],
+			[12, 3],
+		],
+		[
+			[2, 3],
+			[5, 1],
+			[1, 2],
+			[3, 3],
+			[8, 3],
+		],
+		[
+			[4, 3],
+			[10, 1],
+			[1, 3],
+			[4, 3],
+		],
 	]);
 
 	// Mixed recent cards (shorter histories)
 	generateGroup("flashcards/train-recent", 20, 3, 1, [
 		[[3, 3]],
 		[[2, 4]],
-		[[3, 2], [2, 3]],
+		[
+			[3, 2],
+			[2, 3],
+		],
 	]);
 
 	return lines.join("\n") + "\n";

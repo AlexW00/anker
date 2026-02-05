@@ -246,9 +246,9 @@ describe("FsrsOptimizerService Integration", () => {
 		it("rejects empty review data", async () => {
 			const emptyData: ReviewLogData = {};
 
-			await expect(
-				optimizer.optimize(emptyData, true),
-			).rejects.toThrow(/Insufficient review data/);
+			await expect(optimizer.optimize(emptyData, true)).rejects.toThrow(
+				/Insufficient review data/,
+			);
 		});
 
 		it("includes actual review count in error message", async () => {
@@ -263,9 +263,9 @@ describe("FsrsOptimizerService Integration", () => {
 				];
 			}
 
-			await expect(
-				optimizer.optimize(smallData, true),
-			).rejects.toThrow("found 10");
+			await expect(optimizer.optimize(smallData, true)).rejects.toThrow(
+				"found 10",
+			);
 		});
 	});
 
