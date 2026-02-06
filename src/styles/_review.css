@@ -1,7 +1,128 @@
 /* ==========================================================================
    Review View
+   Native Preview Integration for Flashcard Review
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Native Preview Wrapper
+   Applied when viewing flashcard notes in preview mode
+   -------------------------------------------------------------------------- */
+.anker-flashcard-wrapper {
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+.anker-flashcard-wrapper .markdown-reading-view {
+flex: 1;
+overflow: hidden;
+}
+
+.anker-flashcard-wrapper.anker-review-active .markdown-reading-view {
+overflow: hidden;
+}
+
+/* Utility class for hiding elements */
+.anker-hidden {
+display: none !important;
+}
+
+/* Hide flashcard sides that haven't been revealed yet */
+.anker-hidden-side {
+display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Flicker Prevention
+   Hide content during review session until decoration completes.
+   This prevents the full content from being briefly visible when opening a card.
+   Scoped to session leaf only so other tabs render normally.
+   -------------------------------------------------------------------------- */
+.anker-review-session-leaf .markdown-preview-sizer:not(.anker-decorated),
+body.anker-review-card-loading .markdown-preview-sizer {
+visibility: hidden;
+}
+
+.anker-review-session-leaf .metadata-container,
+.anker-review-session-leaf .inline-title {
+display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Review Header (Progress Bar)
+   -------------------------------------------------------------------------- */
+.anker-review-header {
+display: flex;
+align-items: center;
+gap: var(--size-4-3);
+padding: var(--size-4-4);
+background: var(--background-primary);
+border-bottom: 1px solid var(--background-modifier-border);
+flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Review Tab Indicator
+   -------------------------------------------------------------------------- */
+.workspace-tab-header.anker-review-tab .workspace-tab-header-inner {
+display: inline-flex;
+align-items: center;
+gap: var(--size-4-1);
+}
+
+.workspace-tab-header.anker-review-tab .workspace-tab-header-inner::before {
+content: "Review";
+font-size: var(--font-ui-smaller);
+line-height: 1;
+padding: 2px 6px;
+border-radius: var(--radius-s);
+background: var(--background-modifier-hover);
+border: 1px solid var(--background-modifier-border);
+color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Review Footer (Controls)
+   -------------------------------------------------------------------------- */
+.anker-review-footer {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: var(--size-4-2);
+padding: var(--size-4-4);
+background: var(--background-primary);
+border-top: 1px solid var(--background-modifier-border);
+flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Card Content Area (Custom Rendered)
+   -------------------------------------------------------------------------- */
+.anker-card-content {
+flex: 1;
+overflow-y: auto;
+padding: var(--size-4-6);
+cursor: pointer;
+scroll-behavior: smooth;
+}
+
+.anker-card-content .flashcard-card-content {
+max-width: 700px;
+margin: 0 auto;
+}
+
+.anker-card-content .flashcard-card-content p:first-child {
+margin-top: 0;
+}
+
+.anker-card-content .flashcard-card-content p:last-child {
+margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Legacy Review View (kept for compatibility during transition)
+   -------------------------------------------------------------------------- */
 .flashcard-review {
 display: flex;
 flex-direction: column;
@@ -127,6 +248,11 @@ margin-right: auto;
 border-top: 2px dashed var(--background-modifier-border);
 }
 
+/* Show note separators during native review mode */
+.anker-review-active .flashcard-side-separator {
+display: block;
+}
+
 /* --------------------------------------------------------------------------
    Review Controls
    -------------------------------------------------------------------------- */
@@ -247,9 +373,33 @@ background: transparent;
 border: none;
 }
 
+/* --------------------------------------------------------------------------
+   Session Complete Overlay
+   -------------------------------------------------------------------------- */
+.anker-review-complete-overlay {
+flex: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+background: var(--background-primary);
+padding: var(--size-4-8);
+}
+
 .flashcard-complete-state {
 text-align: center;
 padding: var(--size-4-8);
+}
+
+.flashcard-complete-state h3 {
+margin-top: var(--size-4-4);
+margin-bottom: var(--size-4-2);
+font-size: var(--font-ui-large);
+}
+
+.flashcard-complete-state p {
+color: var(--text-muted);
+margin-bottom: var(--size-4-6);
 }
 
 .flashcard-complete-icon {

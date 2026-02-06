@@ -22,6 +22,21 @@
 }
 
 /* ==========================================================================
+   Review Session End Modal
+   ========================================================================== */
+
+.anker-review-end-session-buttons {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+}
+
+.anker-review-end-session-right {
+   display: flex;
+   gap: 8px;
+}
+
+/* ==========================================================================
    Card Errors Modal
    ========================================================================== */
 

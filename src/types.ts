@@ -13,7 +13,7 @@ import {
  * Enable debug logging throughout the plugin.
  * Set to true for development, false for production.
  */
-export const DEBUG = false;
+export const DEBUG = true;
 
 /**
  * Log a debug message if DEBUG is enabled.

@@ -8,5 +8,7 @@ Run:
 
 - npm run lint
 - npm run typecheck
-  iteratively until all issues are resolved.
-  Only return to the user once all issues are resolved.
+- npm run build
+
+iteratively until all issues are resolved.
+Only return to the user once all issues are resolved.
