@@ -201,9 +201,7 @@ export class ReviewSessionManager extends Events {
 
 		this.session.reviewsPerformed++;
 
-		const isDue = newState
-			? this.deckService.isReviewDue(newState)
-			: false;
+		const isDue = newState ? this.deckService.isReviewDue(newState) : false;
 
 		if (newState && !isDue) {
 			this.session.reviewedCount++;
@@ -230,9 +228,7 @@ export class ReviewSessionManager extends Events {
 			(c) => c.path === card.path,
 		);
 		const nextIndex =
-			currentIndex >= 0
-				? (currentIndex + 1) % nextDueCards.length
-				: 0;
+			currentIndex >= 0 ? (currentIndex + 1) % nextDueCards.length : 0;
 		const nextCard = nextDueCards[nextIndex];
 		if (!nextCard) return;
 

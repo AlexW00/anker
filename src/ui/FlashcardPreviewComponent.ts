@@ -102,8 +102,7 @@ export class FlashcardPreviewComponent extends Component {
 	 * Find all markdown views displaying flashcards and decorate them.
 	 */
 	private decorateFlashcardViews(): void {
-		const markdownViews =
-			this.app.workspace.getLeavesOfType("markdown");
+		const markdownViews = this.app.workspace.getLeavesOfType("markdown");
 
 		for (const leaf of markdownViews) {
 			const view = leaf.view as MarkdownView;
@@ -191,7 +190,10 @@ export class FlashcardPreviewComponent extends Component {
 	/**
 	 * Render the progress bar at the top.
 	 */
-	private renderProgressBar(wrapper: HTMLElement, session: ReviewSession): void {
+	private renderProgressBar(
+		wrapper: HTMLElement,
+		session: ReviewSession,
+	): void {
 		let header = wrapper.querySelector(
 			".anker-review-header",
 		) as HTMLElement;
@@ -390,13 +392,16 @@ export class FlashcardPreviewComponent extends Component {
 		) as HTMLElement;
 		if (sizerEl) {
 			// Remove hidden class from all elements
-			const hiddenElements = sizerEl.querySelectorAll(".anker-hidden-side");
+			const hiddenElements =
+				sizerEl.querySelectorAll(".anker-hidden-side");
 			for (const el of Array.from(hiddenElements)) {
 				el.classList.remove("anker-hidden-side");
 			}
-			
+
 			// Remove separator styling
-			const separators = sizerEl.querySelectorAll(".flashcard-side-separator");
+			const separators = sizerEl.querySelectorAll(
+				".flashcard-side-separator",
+			);
 			for (const el of Array.from(separators)) {
 				el.classList.remove("flashcard-side-separator");
 			}
@@ -530,7 +535,7 @@ export class FlashcardPreviewComponent extends Component {
 		const cardContent = wrapper.querySelector(".anker-card-content");
 		if (cardContent) {
 			cardContent.empty();
-			
+
 			const completeState = cardContent.createDiv({
 				cls: "flashcard-complete-state",
 			});
