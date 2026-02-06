@@ -58,7 +58,7 @@ describe("Anki Import Integration", () => {
 
 		describe("parse - decks", () => {
 			it("should parse all decks", () => {
-				expect(packageData.decks.size).toBe(2);
+				expect(packageData.decks.size).toBe(3);
 			});
 
 			it("should parse Default deck", () => {
@@ -70,17 +70,24 @@ describe("Anki Import Integration", () => {
 			it("should parse nested deck with hierarchy separator", () => {
 				// Find the nested deck (id is not 1)
 				const nestedDeck = Array.from(packageData.decks.values()).find(
-					(d) => d.id !== 1,
+					(d) => d.id !== 1 && d.name.includes("nested"),
 				);
 				expect(nestedDeck).toBeDefined();
 				// Anki uses \x1f as hierarchy separator
 				expect(nestedDeck?.name).toContain("nested deck");
 			});
+
+			it("should parse neighbor deck", () => {
+				const neighborDeck = Array.from(packageData.decks.values()).find(
+					(d) => d.name === "neighbor",
+				);
+				expect(neighborDeck).toBeDefined();
+			});
 		});
 
 		describe("parse - notetypes (models)", () => {
 			it("should parse all note types", () => {
-				expect(packageData.models.size).toBe(3);
+				expect(packageData.models.size).toBe(7);
 			});
 
 			it("should parse Basic notetype with correct fields", () => {
@@ -127,11 +134,64 @@ describe("Anki Import Integration", () => {
 				expect(basic?.tmpls[0]?.qfmt).toBeTruthy();
 				expect(basic?.tmpls[0]?.afmt).toBeTruthy();
 			});
+
+			it("should parse Basic (and reversed card) notetype with 2 templates", () => {
+				const reversed = Array.from(packageData.models.values()).find(
+					(m) => m.name === "Basic (and reversed card)",
+				);
+				expect(reversed).toBeDefined();
+				expect(reversed?.flds).toHaveLength(2);
+				expect(reversed?.tmpls).toHaveLength(2);
+				expect(reversed?.tmpls[0]?.name).toBe("Card 1");
+				expect(reversed?.tmpls[1]?.name).toBe("Card 2");
+				expect(reversed?.type).toBe(0); // Standard type
+			});
+
+			it("should parse Basic (optional reversed card) notetype with 3 fields", () => {
+				const optReversed = Array.from(packageData.models.values()).find(
+					(m) => m.name === "Basic (optional reversed card)",
+				);
+				expect(optReversed).toBeDefined();
+				expect(optReversed?.flds).toHaveLength(3);
+				expect(optReversed?.flds.map((f) => f.name)).toEqual([
+					"Front",
+					"Back",
+					"Add Reverse",
+				]);
+				expect(optReversed?.tmpls).toHaveLength(2);
+			});
+
+			it("should parse Basic (type in the answer) notetype", () => {
+				const typeAnswer = Array.from(packageData.models.values()).find(
+					(m) => m.name === "Basic (type in the answer)",
+				);
+				expect(typeAnswer).toBeDefined();
+				expect(typeAnswer?.flds).toHaveLength(2);
+				expect(typeAnswer?.tmpls).toHaveLength(1);
+				// Template uses {{type:Back}} syntax
+				expect(typeAnswer?.tmpls[0]?.afmt).toContain("type:");
+			});
+
+			it("should parse Image Occlusion notetype with 5 fields", () => {
+				const imageOcclusion = Array.from(
+					packageData.models.values(),
+				).find((m) => m.name === "Image Occlusion");
+				expect(imageOcclusion).toBeDefined();
+				expect(imageOcclusion?.flds).toHaveLength(5);
+				expect(imageOcclusion?.flds.map((f) => f.name)).toEqual([
+					"Occlusion",
+					"Image",
+					"Header",
+					"Back Extra",
+					"Comments",
+				]);
+				expect(imageOcclusion?.type).toBe(1); // Cloze type
+			});
 		});
 
 		describe("parse - notes", () => {
 			it("should parse all notes", () => {
-				expect(packageData.notes).toHaveLength(3);
+				expect(packageData.notes).toHaveLength(7);
 			});
 
 			it("should parse note with HTML content", () => {
@@ -171,11 +231,25 @@ describe("Anki Import Integration", () => {
 				const fields = basicNote?.flds.split("\x1f");
 				expect(fields).toHaveLength(2);
 			});
+
+			it("should parse Image Occlusion note with occlusion data", () => {
+				const ioNote = packageData.notes.find((n) => {
+					const model = packageData.models.get(String(n.mid));
+					return model?.name === "Image Occlusion";
+				});
+				expect(ioNote).toBeDefined();
+				const fields = ioNote!.flds.split("\x1f");
+				expect(fields).toHaveLength(5);
+				// Occlusion field contains shape data
+				expect(fields[0]).toContain("image-occlusion:rect:");
+				// Image field contains img tag
+				expect(fields[1]).toContain("<img src=");
+			});
 		});
 
 		describe("parse - cards", () => {
 			it("should parse all cards", () => {
-				expect(packageData.cards).toHaveLength(3);
+				expect(packageData.cards).toHaveLength(9);
 			});
 
 			it("should link cards to notes", () => {
@@ -190,6 +264,20 @@ describe("Anki Import Integration", () => {
 				for (const card of packageData.cards) {
 					expect(deckIds.has(card.did)).toBe(true);
 				}
+			});
+
+			it("should create 2 cards for reversed note type", () => {
+				const reversedNote = packageData.notes.find((n) => {
+					const model = packageData.models.get(String(n.mid));
+					return model?.name === "Basic (and reversed card)";
+				});
+				expect(reversedNote).toBeDefined();
+				const cards = packageData.cards.filter(
+					(c) => c.nid === reversedNote!.id,
+				);
+				expect(cards).toHaveLength(2);
+				// Cards should have different ordinals
+				expect(cards.map((c) => c.ord).sort()).toEqual([0, 1]);
 			});
 		});
 
@@ -297,6 +385,45 @@ describe("Anki Import Integration", () => {
 				),
 			).toBe(true);
 		});
+
+		it("should preserve Image Occlusion data without conversion", () => {
+			const ioNote = packageData.notes.find((n) => {
+				const model = packageData.models.get(String(n.mid));
+				return model?.name === "Image Occlusion";
+			});
+			expect(ioNote).toBeDefined();
+
+			// Occlusion field (first field) contains cloze-style data
+			const occlusionField = ioNote!.flds.split("\x1f")[0]!;
+			const result = contentConverter.convert(
+				occlusionField,
+				packageData.media,
+			);
+
+			// Image occlusion cloze syntax has colons inside the answer,
+			// which the cloze regex doesn't handle. The data is preserved as-is.
+			// This is acceptable since occlusion functionality won't work anyway.
+			expect(result.markdown).toContain("image-occlusion:rect:");
+		});
+
+		it("should convert Image Occlusion image field to wiki-link", () => {
+			const ioNote = packageData.notes.find((n) => {
+				const model = packageData.models.get(String(n.mid));
+				return model?.name === "Image Occlusion";
+			});
+			expect(ioNote).toBeDefined();
+
+			// Image field (second field) contains img tag
+			const imageField = ioNote!.flds.split("\x1f")[1]!;
+			const result = contentConverter.convert(
+				imageField,
+				packageData.media,
+			);
+
+			// Should convert to wiki-link format
+			expect(result.markdown).toContain("![[9f1b5b46aed533f5386cf276ab2cdce48cbd2e25.png]]");
+			expect(result.mediaFiles.size).toBe(1);
+		});
 	});
 
 	describe("Template Conversion Pipeline", () => {
@@ -358,6 +485,39 @@ describe("Anki Import Integration", () => {
 			expect(templates[0]?.variables).toContain("answer");
 			expect(templates[0]?.body).toContain("{{ question }}");
 			expect(templates[0]?.body).toContain("{{ answer }}");
+		});
+
+		it("should convert reversed card model to 2 templates", () => {
+			const reversed = Array.from(packageData.models.values()).find(
+				(m) => m.name === "Basic (and reversed card)",
+			);
+			expect(reversed).toBeDefined();
+
+			const templates = templateConverter.convertModel(reversed!);
+
+			expect(templates).toHaveLength(2);
+			// Each template gets a unique name with ordinal
+			expect(templates[0]?.name).toBe("Basic (and reversed card) - Card 1");
+			expect(templates[1]?.name).toBe("Basic (and reversed card) - Card 2");
+			// Both templates should use Front and Back fields
+			expect(templates[0]?.variables).toContain("Front");
+			expect(templates[0]?.variables).toContain("Back");
+			expect(templates[1]?.variables).toContain("Front");
+			expect(templates[1]?.variables).toContain("Back");
+		});
+
+		it("should strip type: prefix from type-in-answer templates", () => {
+			const typeAnswer = Array.from(packageData.models.values()).find(
+				(m) => m.name === "Basic (type in the answer)",
+			);
+			expect(typeAnswer).toBeDefined();
+
+			const templates = templateConverter.convertModel(typeAnswer!);
+
+			expect(templates).toHaveLength(1);
+			// The {{type:Back}} syntax should be converted to {{ Back }}
+			expect(templates[0]?.body).toContain("{{ Back }}");
+			expect(templates[0]?.body).not.toContain("type:");
 		});
 	});
 

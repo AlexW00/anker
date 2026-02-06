@@ -47,40 +47,77 @@
 
 ## Test fixture: example-export.apkg
 
-The file `resources/example-export.apkg` is used for integration testing. It contains a variety of data to exercise the import pipeline.
+The file `resources/example-export.apkg` is used for integration testing. It contains a variety of data to exercise the import pipeline, including examples of all supported Anki note types.
 
 ### Contents
 
-**Decks (2)**
+**Decks (3)**
 
 | ID            | Name                 |
 | ------------- | -------------------- |
 | 1             | Default              |
 | 1770302890374 | Default::nested deck |
+| 1770395230113 | neighbor             |
 
-**Note Types (3)**
+**Note Types (7)**
 
-| Name   | Type         | Fields                      |
-| ------ | ------------ | --------------------------- |
-| Basic  | Standard (0) | Front, Back                 |
-| Cloze  | Cloze (1)    | Text, Back Extra            |
-| Custom | Standard (0) | Front, Back, Comment, Image |
+| Name                         | Type         | Fields                                           | Templates |
+| ---------------------------- | ------------ | ------------------------------------------------ | --------- |
+| Basic                        | Standard (0) | Front, Back                                      | 1         |
+| Basic (and reversed card)    | Standard (0) | Front, Back                                      | 2         |
+| Basic (optional reversed card) | Standard (0) | Front, Back, Add Reverse                       | 2         |
+| Basic (type in the answer)   | Standard (0) | Front, Back                                      | 1         |
+| Cloze                        | Cloze (1)    | Text, Back Extra                                 | 1         |
+| Image Occlusion              | Cloze (1)    | Occlusion, Image, Header, Back Extra, Comments   | 1         |
+| Custom                       | Standard (0) | Front, Back, Comment, Image                      | 1         |
 
-**Notes (3)**
+**Notes (7)**
 
-1. **Custom note** — Contains:
+1. **Custom note** (deck: Default) — Contains:
     - HTML formatting (`<ul>`, `<b>`, `<br>`)
     - Furigana with ruby annotation
     - Image reference (`<img src="...png">`)
     - Tags: `ddd`, `tag2`
 
-2. **Cloze note** — Contains:
+2. **Cloze note** (deck: Default) — Contains:
     - Cloze deletion: `{{c1::hidden}}`
     - Back Extra field
 
-3. **Basic note** — Simple text in Front/Back fields
+3. **Basic note** (deck: nested deck) — Simple text in Front/Back fields
 
-**Cards (3)** — One card per note, linked to respective decks.
+4. **Basic (and reversed card) note** (deck: neighbor) — Contains:
+    - Front: `basic`
+    - Back: `and reverse`
+    - Creates 2 cards (one for each direction)
+
+5. **Basic (optional reversed card) note** (deck: neighbor) — Contains:
+    - Front: `basic`
+    - Back: `optional`
+    - Add Reverse: `reverse`
+    - Creates 2 cards (reverse card is generated because Add Reverse field is non-empty)
+
+6. **Basic (type in the answer) note** (deck: neighbor) — Contains:
+    - Front: `baisc` (typo intentional, matches fixture)
+    - Back: `type in the answer`
+    - Template uses `{{type:Back}}` syntax (stripped during conversion)
+
+7. **Image Occlusion note** (deck: neighbor) — Contains:
+    - Occlusion: `{{c1::image-occlusion:rect:left=.4059:top=.4105:width=.5093:height=.463:oi=1}}`
+    - Image: same PNG as Custom note
+    - Header, Back Extra, Comments: empty
+    - Note: Occlusion masks are not supported; imports as regular image card
+
+**Cards (9)**
+
+| Note Type                    | Card Count | Notes                                  |
+| ---------------------------- | ---------- | -------------------------------------- |
+| Custom                       | 1          | Single card                            |
+| Cloze                        | 1          | Single cloze deletion                  |
+| Basic                        | 1          | Single card                            |
+| Basic (and reversed card)    | 2          | Card 1 (Front→Back), Card 2 (Back→Front) |
+| Basic (optional reversed card) | 2        | Card 1 + optional Card 2               |
+| Basic (type in the answer)   | 1          | Single card (type feature stripped)    |
+| Image Occlusion              | 1          | Single occlusion region                |
 
 **Media (1)**
 
@@ -89,6 +126,13 @@ The file `resources/example-export.apkg` is used for integration testing. It con
 | 0   | 9f1b5b46aed533f5386cf276ab2cdce48cbd2e25.png |
 
 The media file is zstd-compressed in the ZIP and is a PNG image.
+
+### Unsupported features
+
+The following Anki features are imported but their interactive functionality is not preserved:
+
+- **Image Occlusion**: Occlusion masks are converted to highlight syntax (`==...==`). The base image is preserved but the masking/reveal behavior does not work during review.
+- **Type in the answer**: The `{{type:Field}}` syntax is stripped and the field is displayed as plain text. No input field is rendered during review.
 
 ### Inspecting the fixture
 
