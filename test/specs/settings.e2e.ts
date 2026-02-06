@@ -1,5 +1,6 @@
 import { describe, it, before, after } from "mocha";
 import { browser, expect } from "@wdio/globals";
+import type { ElementArray } from "webdriverio";
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForVaultReady } from "../helpers/waitForVaultReady";
 import type {
@@ -54,8 +55,13 @@ describe("Settings", function () {
 		// If not found directly, look for it via text
 		if (!(await pluginTab.isExisting())) {
 			// Try to find the tab by text content matching "Anker"
-			const tabItems = browser.$$(".vertical-tab-nav-item");
-			for (const tab of tabItems) {
+			// eslint-disable-next-line @typescript-eslint/await-thenable
+			const tabItems = (await browser.$$(
+				".vertical-tab-nav-item",
+			)) as unknown as ElementArray;
+			for (let i = 0; i < tabItems.length; i++) {
+				const tab = tabItems[i];
+				if (!tab) continue;
 				const text = await tab.getText();
 				if (text.toLowerCase().includes("anker")) {
 					await tab.click();
@@ -96,8 +102,13 @@ describe("Settings", function () {
 	 * Find a setting by its name and return the container element.
 	 */
 	const findSettingByName = async (name: string) => {
-		const settings = browser.$$(".setting-item");
-		for (const setting of settings) {
+		// eslint-disable-next-line @typescript-eslint/await-thenable
+		const settings = (await browser.$$(
+			".setting-item",
+		)) as unknown as ElementArray;
+		for (let i = 0; i < settings.length; i++) {
+			const setting = settings[i];
+			if (!setting) continue;
 			const nameEl = setting.$(".setting-item-name");
 			if (await nameEl.isExisting()) {
 				const text = await nameEl.getText();

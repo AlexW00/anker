@@ -56,7 +56,7 @@ describe("Review Bugs", function () {
 	};
 
 	const readReviewHistory = async (): Promise<ReviewHistoryResult> => {
-		return await browser.executeObsidian(async ({ app }) => {
+		const result = await browser.executeObsidian(async ({ app }) => {
 			const obsidianApp = app as ObsidianAppLike;
 			const plugin = obsidianApp.plugins?.getPlugin?.("anker");
 			const pluginId = plugin?.manifest?.id ?? "anker";
@@ -65,15 +65,18 @@ describe("Review Bugs", function () {
 			const raw = exists
 				? await obsidianApp.vault.adapter.read(path)
 				: "";
-			const entries = raw
-				.split("\n")
-				.map((line) => line.trim())
-				.filter(Boolean)
-				.map((line) => parseReviewHistoryLine(line))
-				.filter((line): line is ReviewHistoryLine => line !== null);
-
-			return { path, entries };
+			return { path, raw };
 		});
+
+		// Parse in Node.js context (not browser)
+		const entries = result.raw
+			.split("\n")
+			.map((line) => line.trim())
+			.filter(Boolean)
+			.map((line) => parseReviewHistoryLine(line))
+			.filter((line): line is ReviewHistoryLine => line !== null);
+
+		return { path: result.path, entries };
 	};
 
 	const resetReviewHistory = async (): Promise<ReviewHistoryResult> => {
