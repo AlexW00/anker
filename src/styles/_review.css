@@ -43,6 +43,11 @@ body.anker-review-card-loading .markdown-preview-sizer {
 visibility: hidden;
 }
 
+.anker-review-session-leaf .metadata-container,
+.anker-review-session-leaf .inline-title {
+display: none !important;
+}
+
 /* --------------------------------------------------------------------------
    Review Header (Progress Bar)
    -------------------------------------------------------------------------- */

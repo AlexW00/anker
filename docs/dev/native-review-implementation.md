@@ -48,6 +48,27 @@ Defined in `src/styles/_review.css`:
 - `.anker-hidden-side`: `display: none !important` - used to hide future sides and metadata.
 - `.flashcard-side-separator`: Styling for the `<hr>` elements (dashed line).
 
+## Implementation Notes and Learnings
+
+These notes capture subtle behaviors in Obsidian's preview rendering and the review decoration lifecycle. They are here to prevent regressions.
+
+### Render Timing and Flicker Prevention
+
+- The preview DOM can render in multiple passes. The initial `file-open` event can fire before the `.markdown-preview-sizer` has children, which can briefly expose full content.
+- The review UI should keep the preview hidden until decoration completes. Use `body.anker-review-card-loading` and remove it only after `.anker-decorated` is applied.
+- A `MutationObserver` on `.markdown-preview-sizer` is used to re-run decoration after the preview finishes rendering. This avoids race conditions that cause the full card to show.
+
+### Side Separation Detection
+
+- Obsidian renders markdown separators (`---`) as `<div class="el-hr"><hr></div>`, not always as direct `<hr>` children.
+- Side splitting must detect separators in wrapper elements, not just `:scope > hr`.
+- If separators are missed, the card looks like a single-side card and the UI will show rating buttons immediately.
+
+### Metadata and Title Visibility
+
+- Metadata (`.metadata-container`) and the inline title can flash briefly during preview render.
+- Hide these at the leaf level in review mode, not only during per-card decoration.
+
 ## Review Session Flow
 
 1. **Start**: User selects a deck. `ReviewSessionManager.startSession()` fetches due cards.

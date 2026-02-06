@@ -24,6 +24,7 @@ export class FlashcardPreviewComponent extends Component {
 
 	// Track decorated views to avoid duplicates
 	private decoratedLeaves = new WeakSet<MarkdownView>();
+	private renderObservers = new WeakMap<HTMLElement, MutationObserver>();
 
 	constructor(plugin: AnkerPlugin, sessionManager: ReviewSessionManager) {
 		super();
@@ -284,7 +285,7 @@ export class FlashcardPreviewComponent extends Component {
 	 */
 	private renderContent(
 		wrapper: HTMLElement,
-		_file: TFile,
+		file: TFile,
 		session: ReviewSession,
 	): void {
 		const contentEl = wrapper.querySelector(
@@ -309,6 +310,19 @@ export class FlashcardPreviewComponent extends Component {
 		) as HTMLElement;
 		if (!sizerEl) return;
 
+		if (!this.renderObservers.has(sizerEl)) {
+			const observer = new MutationObserver(() => {
+				observer.disconnect();
+				this.renderObservers.delete(sizerEl);
+				this.decorateFlashcardViews();
+			});
+			observer.observe(sizerEl, { childList: true, subtree: true });
+			this.renderObservers.set(sizerEl, observer);
+		}
+
+		// Keep the preview hidden while we decorate to prevent flicker.
+		document.body.classList.add("anker-review-card-loading");
+
 		// Ensure content is hidden until this pass completes
 		sizerEl.classList.remove("anker-decorated");
 		debugLog("review: decorate start", session.currentCardPath);
@@ -328,18 +342,6 @@ export class FlashcardPreviewComponent extends Component {
 			inlineTitle.classList.add("anker-hidden-side");
 		}
 
-		// Find all <hr> elements which represent side separators
-		// These are the actual markdown --- separators rendered as <hr>
-		const hrElements = Array.from(
-			sizerEl.querySelectorAll(":scope > hr, :scope > div > hr"),
-		);
-		const totalSides = hrElements.length + 1;
-
-		// Update session total sides based on actual rendered HRs
-		if (session.totalSides !== totalSides) {
-			session.totalSides = totalSides;
-		}
-
 		// Get all direct children of the sizer (excluding metadata and title)
 		const sectionEls = Array.from(
 			sizerEl.querySelectorAll(":scope > .markdown-preview-section"),
@@ -350,9 +352,21 @@ export class FlashcardPreviewComponent extends Component {
 				)
 			: (Array.from(sizerEl.children) as HTMLElement[]);
 
+		if (children.length === 0) {
+			return;
+		}
+
+		const findHrElement = (child: HTMLElement): HTMLElement | null => {
+			if (child.tagName === "HR") {
+				return child;
+			}
+			return child.querySelector(":scope > hr");
+		};
+
 		// Group children into sides based on <hr> positions
 		let currentSideIndex = 0;
 		let hasSeenContent = false;
+		let separatorCount = 0;
 
 		for (const child of children) {
 			// Skip metadata and title (already hidden above)
@@ -364,12 +378,7 @@ export class FlashcardPreviewComponent extends Component {
 			}
 
 			// Check if this is an HR (side separator)
-			const directHr =
-				child.tagName === "HR"
-					? (child as HTMLElement)
-					: (child.querySelector(
-							":scope > hr",
-						) as HTMLElement | null);
+			const directHr = findHrElement(child);
 			const isHr = directHr !== null;
 
 			if (isHr) {
@@ -378,6 +387,7 @@ export class FlashcardPreviewComponent extends Component {
 					child.classList.add("anker-hidden-side");
 					continue;
 				}
+				separatorCount++;
 				currentSideIndex++;
 				// Style the HR as a side separator
 				directHr?.classList.add("flashcard-side-separator");
@@ -397,6 +407,11 @@ export class FlashcardPreviewComponent extends Component {
 			if (!isHr) {
 				hasSeenContent = true;
 			}
+		}
+
+		const totalSides = separatorCount + 1;
+		if (session.totalSides !== totalSides) {
+			session.totalSides = totalSides;
 		}
 
 		// Add click handler to content area for revealing next side
@@ -444,6 +459,12 @@ export class FlashcardPreviewComponent extends Component {
 		if (sizerEl) {
 			// Remove decoration marker
 			sizerEl.classList.remove("anker-decorated");
+
+			const observer = this.renderObservers.get(sizerEl);
+			if (observer) {
+				observer.disconnect();
+				this.renderObservers.delete(sizerEl);
+			}
 
 			// Remove hidden class from all elements
 			const hiddenElements =
