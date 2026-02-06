@@ -2,9 +2,15 @@
 
 An Obsidian **native** flashcards plugin using the FSRS algorithm.
 
-DISCLAIMER: Alpha! Planning to release it as a beta soon tho!
 
--> [todos](todo.md)
+Update: Not planning to pursue this project further, because of performance:
+
+- for small collections (~1000 cards) its working fine
+- however, my anki collection is over 7000 cards long - obsidian and its caching system is simply not made for such large amounts of data
+- while reviewing my cards i noticed a 500ms-1000ms lag during reviews - it was the time obsidian needed to update the frontmatter of the reviewed card
+- with no obvious way to optimize this (other than using some database) i won't pursue this project any further
+
+However, if you're curious, feel free to check out this plugin. Other than performance with large collections, its working fine.
 
 https://github.com/user-attachments/assets/30173ecd-e0e3-4e80-a01d-f1c3a2e3f397
 
