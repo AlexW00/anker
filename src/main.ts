@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Plugin, TFile } from "obsidian";
+import { Editor, MarkdownView, Notice, Plugin, Scope, TFile } from "obsidian";
 import { AnkerSettingTab } from "./settings";
 import {
 	DEFAULT_SETTINGS,
@@ -12,15 +12,16 @@ import {
 import { TemplateService } from "./flashcards/TemplateService";
 import { CardService } from "./flashcards/CardService";
 import { DeckService } from "./flashcards/DeckService";
-import { Scheduler } from "./srs/Scheduler";
+import { Rating, Scheduler } from "./srs/Scheduler";
 import { FsrsOptimizerService } from "./srs/FsrsOptimizerService";
 import { ReviewLogStore } from "./srs/ReviewLogStore";
 import { CardRegenService } from "./services/CardRegenService";
 import { AttachmentCleanupService } from "./services/AttachmentCleanupService";
 import { AiCacheService } from "./services/AiCacheService";
 import { AiService } from "./services/AiService";
+import { ReviewSessionManager } from "./services/ReviewSessionManager";
 import { DashboardView, DASHBOARD_VIEW_TYPE } from "./ui/DashboardView";
-import { ReviewView, REVIEW_VIEW_TYPE } from "./ui/ReviewView";
+import { FlashcardPreviewComponent } from "./ui/FlashcardPreviewComponent";
 import { DeckSelectorModal } from "./ui/DeckSelectorModal";
 import { TemplateSelectorModal } from "./ui/TemplateSelectorModal";
 import { TemplateNameModal } from "./ui/TemplateNameModal";
@@ -65,6 +66,12 @@ export default class AnkerPlugin extends Plugin {
 	private fsrsOptimizerService: FsrsOptimizerService | null = null;
 	/** Centralized store for review history (persisted in plugin folder) */
 	reviewLogStore: ReviewLogStore;
+	/** Global manager for review sessions */
+	reviewSessionManager: ReviewSessionManager;
+	/** Component for flashcard preview decorations */
+	private flashcardPreviewComponent: FlashcardPreviewComponent | null = null;
+	/** Scope for review keyboard shortcuts */
+	private reviewScope: Scope | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -85,6 +92,15 @@ export default class AnkerPlugin extends Plugin {
 		// Initialize review log store
 		this.reviewLogStore = new ReviewLogStore(this.app, this.manifest.id);
 		await this.reviewLogStore.load();
+
+		// Initialize review session manager
+		this.reviewSessionManager = new ReviewSessionManager(
+			this.app,
+			this.deckService,
+			this.cardService,
+			this.scheduler,
+			this.reviewLogStore,
+		);
 
 		// Initialize AI cache service
 		this.aiCacheService = new AiCacheService(this.app);
@@ -141,10 +157,16 @@ export default class AnkerPlugin extends Plugin {
 			DASHBOARD_VIEW_TYPE,
 			(leaf) => new DashboardView(leaf, this),
 		);
-		this.registerView(
-			REVIEW_VIEW_TYPE,
-			(leaf) => new ReviewView(leaf, this),
+
+		// Initialize flashcard preview component (replaces old ReviewView)
+		this.flashcardPreviewComponent = new FlashcardPreviewComponent(
+			this,
+			this.reviewSessionManager,
 		);
+		this.addChild(this.flashcardPreviewComponent);
+
+		// Register review keyboard shortcuts
+		this.registerReviewKeyboardShortcuts();
 
 		// Register auto-regenerate listener for frontmatter changes
 		this.registerEvent(
@@ -201,7 +223,15 @@ export default class AnkerPlugin extends Plugin {
 		this.cardRegenService = null;
 		this.aiService = null;
 		this.aiCacheService = null;
-		// Views are automatically cleaned up
+		// End any active review session
+		this.reviewSessionManager?.endSession();
+		// Unload flashcard preview component (will be cleaned up by addChild)
+		this.flashcardPreviewComponent = null;
+		// Unregister review scope
+		if (this.reviewScope) {
+			this.app.keymap.popScope(this.reviewScope);
+			this.reviewScope = null;
+		}
 	}
 
 	async loadSettings() {
@@ -517,6 +547,89 @@ export default class AnkerPlugin extends Plugin {
 	}
 
 	/**
+	 * Register global keyboard shortcuts for review mode.
+	 * These are added to a scope that is pushed when review starts.
+	 */
+	private registerReviewKeyboardShortcuts(): void {
+		// Listen to session events to manage scope
+		this.reviewSessionManager.on("session-ended", () => {
+			if (this.reviewScope) {
+				this.app.keymap.popScope(this.reviewScope);
+			}
+		});
+
+		this.reviewSessionManager.on("session-complete", () => {
+			if (this.reviewScope) {
+				this.app.keymap.popScope(this.reviewScope);
+			}
+		});
+	}
+
+	/**
+	 * Register hotkeys on a scope for review mode.
+	 */
+	private registerReviewHotkeysOnScope(scope: Scope): void {
+		// Space - reveal next side or rate as "Good"
+		scope.register([], " ", () => {
+			const session = this.reviewSessionManager.getSession();
+			if (!session) return;
+			if (!this.reviewSessionManager.isLastSide()) {
+				this.reviewSessionManager.revealNext();
+			} else {
+				void this.reviewSessionManager.rateCard(Rating.Good);
+			}
+			return false;
+		});
+
+		// E - edit current card
+		scope.register([], "e", () => {
+			const session = this.reviewSessionManager.getSession();
+			if (!session) return;
+			const file = this.app.vault.getAbstractFileByPath(
+				session.currentCardPath,
+			);
+			if (file instanceof TFile) {
+				void this.editCard(file);
+			}
+			return false;
+		});
+
+		// 1 - rate as Again
+		scope.register([], "1", () => {
+			if (!this.reviewSessionManager.isLastSide()) return;
+			void this.reviewSessionManager.rateCard(Rating.Again);
+			return false;
+		});
+
+		// 2 - rate as Hard
+		scope.register([], "2", () => {
+			if (!this.reviewSessionManager.isLastSide()) return;
+			void this.reviewSessionManager.rateCard(Rating.Hard);
+			return false;
+		});
+
+		// 3 - rate as Good
+		scope.register([], "3", () => {
+			if (!this.reviewSessionManager.isLastSide()) return;
+			void this.reviewSessionManager.rateCard(Rating.Good);
+			return false;
+		});
+
+		// 4 - rate as Easy
+		scope.register([], "4", () => {
+			if (!this.reviewSessionManager.isLastSide()) return;
+			void this.reviewSessionManager.rateCard(Rating.Easy);
+			return false;
+		});
+
+		// Escape - end review session
+		scope.register([], "Escape", () => {
+			this.reviewSessionManager.endSession();
+			return false;
+		});
+	}
+
+	/**
 	 * Open the flashcards dashboard view.
 	 */
 	async openDashboard() {
@@ -537,22 +650,18 @@ export default class AnkerPlugin extends Plugin {
 
 	/**
 	 * Start a review session for a deck.
+	 * Opens the first due card in preview mode with review controls.
 	 */
 	async startReview(deckPath: string) {
-		let leaf = this.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0];
-
-		if (!leaf) {
-			leaf = this.app.workspace.getLeaf("tab");
-			await leaf.setViewState({
-				type: REVIEW_VIEW_TYPE,
-				active: true,
-			});
+		// Push review scope for keyboard shortcuts
+		if (!this.reviewScope) {
+			this.reviewScope = new Scope(this.app.scope);
+			this.registerReviewHotkeysOnScope(this.reviewScope);
 		}
+		this.app.keymap.pushScope(this.reviewScope);
 
-		void this.app.workspace.revealLeaf(leaf);
-
-		const view = leaf.view as ReviewView;
-		await view.startSession(deckPath);
+		// Start the session - this will open the first card
+		await this.reviewSessionManager.startSession(deckPath);
 	}
 
 	/**

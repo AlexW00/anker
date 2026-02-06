@@ -1,7 +1,92 @@
 /* ==========================================================================
    Review View
+   Native Preview Integration for Flashcard Review
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Native Preview Wrapper
+   Applied when viewing flashcard notes in preview mode
+   -------------------------------------------------------------------------- */
+.anker-flashcard-wrapper {
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+.anker-flashcard-wrapper .markdown-reading-view {
+flex: 1;
+overflow: hidden;
+}
+
+.anker-flashcard-wrapper.anker-review-active .markdown-reading-view {
+overflow: hidden;
+}
+
+/* Utility class for hiding elements */
+.anker-hidden {
+display: none !important;
+}
+
+/* Hide flashcard sides that haven't been revealed yet */
+.anker-hidden-side {
+display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Review Header (Progress Bar)
+   -------------------------------------------------------------------------- */
+.anker-review-header {
+display: flex;
+align-items: center;
+gap: var(--size-4-3);
+padding: var(--size-4-4);
+background: var(--background-primary);
+border-bottom: 1px solid var(--background-modifier-border);
+flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Review Footer (Controls)
+   -------------------------------------------------------------------------- */
+.anker-review-footer {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: var(--size-4-2);
+padding: var(--size-4-4);
+background: var(--background-primary);
+border-top: 1px solid var(--background-modifier-border);
+flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Card Content Area (Custom Rendered)
+   -------------------------------------------------------------------------- */
+.anker-card-content {
+flex: 1;
+overflow-y: auto;
+padding: var(--size-4-6);
+cursor: pointer;
+scroll-behavior: smooth;
+}
+
+.anker-card-content .flashcard-card-content {
+max-width: 700px;
+margin: 0 auto;
+}
+
+.anker-card-content .flashcard-card-content p:first-child {
+margin-top: 0;
+}
+
+.anker-card-content .flashcard-card-content p:last-child {
+margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Legacy Review View (kept for compatibility during transition)
+   -------------------------------------------------------------------------- */
 .flashcard-review {
 display: flex;
 flex-direction: column;
