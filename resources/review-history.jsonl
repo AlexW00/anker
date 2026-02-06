@@ -953,8 +953,4 @@
 {"cardId":"000000d9-0000-4000-8000-000000000000","entry":{"timestamp":"2024-06-05T23:07:31.061Z","rating":3,"elapsed_days":3}}
 {"cardId":"000000da-0000-4000-8000-000000000000","entry":{"timestamp":"2024-06-01T15:16:00.000Z","rating":3,"elapsed_days":0}}
 {"cardId":"000000da-0000-4000-8000-000000000000","entry":{"timestamp":"2024-06-02T19:10:14.482Z","rating":3,"elapsed_days":1}}
-{"cardId":"000000da-0000-4000-8000-000000000000","entry":{"timestamp":"2024-06-05T03:41:06.236Z","rating":4,"elapsed_days":2}}{"cardId":"a1b9b981-d6de-4bde-ad7d-048feac9b9dc","entry":{"timestamp":"2026-02-06T19:23:20.864Z","rating":1,"elapsed_days":0}}
-{"cardId":"a1b9b981-d6de-4bde-ad7d-048feac9b9dc","entry":{"timestamp":"2026-02-06T19:23:42.344Z","rating":1,"elapsed_days":0}}
-{"cardId":"a1b9b981-d6de-4bde-ad7d-048feac9b9dc","entry":{"timestamp":"2026-02-06T19:23:44.918Z","rating":1,"elapsed_days":0}}
-{"cardId":"a1b9b981-d6de-4bde-ad7d-048feac9b9dc","entry":{"timestamp":"2026-02-06T19:23:45.694Z","rating":1,"elapsed_days":0}}
-{"cardId":"a1b9b981-d6de-4bde-ad7d-048feac9b9dc","entry":{"timestamp":"2026-02-06T19:23:47.696Z","rating":1,"elapsed_days":0}}
+{"cardId":"000000da-0000-4000-8000-000000000000","entry":{"timestamp":"2024-06-05T03:41:06.236Z","rating":4,"elapsed_days":2}}
