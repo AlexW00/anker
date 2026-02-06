@@ -202,7 +202,8 @@ export class FlashcardPreviewComponent extends Component {
 		isReviewing: boolean,
 	): void {
 		const leaf = view.leaf;
-		const tabHeaderEl = (leaf as { tabHeaderEl?: HTMLElement })?.tabHeaderEl;
+		const tabHeaderEl = (leaf as { tabHeaderEl?: HTMLElement })
+			?.tabHeaderEl;
 		if (!tabHeaderEl) return;
 
 		tabHeaderEl.classList.toggle("anker-review-tab", isReviewing);
@@ -346,7 +347,7 @@ export class FlashcardPreviewComponent extends Component {
 		const children = sectionEls.length
 			? sectionEls.flatMap(
 					(section) => Array.from(section.children) as HTMLElement[],
-			  )
+				)
 			: (Array.from(sizerEl.children) as HTMLElement[]);
 
 		// Group children into sides based on <hr> positions
@@ -363,9 +364,12 @@ export class FlashcardPreviewComponent extends Component {
 			}
 
 			// Check if this is an HR (side separator)
-			const directHr = child.tagName === "HR"
-				? (child as HTMLElement)
-				: (child.querySelector(":scope > hr") as HTMLElement | null);
+			const directHr =
+				child.tagName === "HR"
+					? (child as HTMLElement)
+					: (child.querySelector(
+							":scope > hr",
+						) as HTMLElement | null);
 			const isHr = directHr !== null;
 
 			if (isHr) {

@@ -62,8 +62,8 @@ export class ConfirmEndSessionModal extends Modal {
 
 		// Navigate button (right side)
 		if (this.onNavigate) {
-				rightButtons
-					.createEl("button", { text: "Open existing" })
+			rightButtons
+				.createEl("button", { text: "Open existing" })
 				.addEventListener("click", () => {
 					this.onNavigate?.();
 					this.resolve(false);
@@ -71,7 +71,7 @@ export class ConfirmEndSessionModal extends Modal {
 		}
 
 		// Confirm button (right side)
-			rightButtons
+		rightButtons
 			.createEl("button", {
 				text: "Start new",
 				cls: "mod-cta",
