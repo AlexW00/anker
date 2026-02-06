@@ -2,7 +2,7 @@ import type { App } from "obsidian";
 import type { Tokenizer } from "@patdx/kuromoji";
 import type { DictionaryManager } from "./DictionaryManager";
 import * as kuromoji from "@patdx/kuromoji";
-import pako from "pako";
+import * as fflate from "fflate";
 
 /**
  * Service for converting Japanese text to furigana format.
@@ -43,8 +43,8 @@ export class FuriganaService {
 					// Read compressed file using Obsidian's adapter
 					const compressedData = await adapter.readBinary(filePath);
 
-					// Decompress gzip data using pako
-					const decompressed = pako.ungzip(
+					// Decompress gzip data using fflate
+					const decompressed = fflate.gunzipSync(
 						new Uint8Array(compressedData),
 					);
 					return decompressed.buffer;

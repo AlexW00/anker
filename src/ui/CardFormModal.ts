@@ -376,7 +376,7 @@ export class CardFormModal extends Modal {
 		});
 
 		groupDeck.createSpan({
-			text: " Card in ",
+			text: " Card\u00A0in ",
 			cls: "flashcard-modal-header-text",
 		});
 

@@ -36,6 +36,19 @@
    gap: 8px;
 }
 
+/* Mobile: stack right buttons vertically */
+.is-mobile .anker-review-end-session-buttons {
+   flex-direction: row;
+   align-items: flex-end;
+   width: 100%;
+}
+
+.is-mobile .anker-review-end-session-right {
+   flex-direction: column;
+   align-items: flex-end;
+   gap: var(--size-4-2);
+}
+
 /* ==========================================================================
    Card Errors Modal
    ========================================================================== */
@@ -115,6 +128,14 @@
    margin-bottom: var(--size-4-4);
 }
 
+.anki-import-file-control {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   gap: var(--size-4-1);
+   padding: var(--size-4-4) 0;
+}
+
 .anki-import-filename {
    color: var(--text-muted);
    font-size: var(--font-ui-small);
@@ -182,35 +203,12 @@
    margin: var(--size-4-4) 0;
 }
 
-.anki-import-file-section .setting-item {
-   align-items: center;
-   justify-content: space-between;
-   width: 100%;
-}
-
-.anki-import-file-section .setting-item-info {
-   flex: 1;
-}
-
 /* ==========================================================================
    Furigana Dictionary Modal
    ========================================================================== */
 
 .furigana-download-progress.is-hidden {
    display: none;
-}
-
-.anki-import-file-section .setting-item-control {
-   flex: 0 0 auto;
-}
-
-.anki-import-file-control {
-   display: flex;
-   flex-direction: column;
-   align-items: flex-end;
-   justify-content: center;
-   gap: var(--size-4-1);
-   text-align: right;
 }
 
 .anki-import-loading,

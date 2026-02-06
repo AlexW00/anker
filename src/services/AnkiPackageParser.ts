@@ -4,8 +4,8 @@
  * This module contains the extraction and parsing logic that doesn't depend on
  * Obsidian APIs. It can be tested independently and used by AnkiImportService.
  */
-import JSZip from "jszip";
-import * as protobuf from "protobufjs";
+import { unzipSync } from "fflate";
+import { getMediaEntriesType } from "../schemas/AnkiMediaSchema";
 import { decompress as zstdDecompress } from "fzstd";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import type {
@@ -35,7 +35,8 @@ export interface SqlJsInitOptions {
  */
 export class AnkiPackageParser {
 	private sqlPromise: Promise<SqlJsStatic> | null = null;
-	private mediaProtoType: protobuf.Type | null = null;
+	private mediaProtoType: ReturnType<typeof getMediaEntriesType> | null =
+		null;
 	private sqlJsOptions: SqlJsInitOptions;
 
 	constructor(options: SqlJsInitOptions = {}) {
@@ -61,22 +62,21 @@ export class AnkiPackageParser {
 	 */
 	async parse(buffer: ArrayBuffer): Promise<AnkiPackageData> {
 		// Load the ZIP
-		const zip = await JSZip.loadAsync(buffer);
+		const zip = unzipSync(new Uint8Array(buffer));
 
 		// Only support the new format (Anki 2.1.50+)
-		const dbFile = zip.file("collection.anki21b");
-		if (!dbFile) {
+		const dbFileData = zip["collection.anki21b"];
+		if (!dbFileData) {
 			throw new Error(
 				"Unsupported Anki export. Please export using Anki 2.1.50+ (.anki21b)",
 			);
 		}
 
 		// Load the media mapping (protobuf, possibly zstd-compressed)
-		const mediaFile = zip.file("media");
+		const mediaFileData = zip["media"];
 		let mediaMap = new Map<string, string>();
-		if (mediaFile) {
-			const mediaBuffer = await mediaFile.async("arraybuffer");
-			const mediaBytes = new Uint8Array(mediaBuffer);
+		if (mediaFileData) {
+			const mediaBytes = mediaFileData;
 
 			// Check if media is zstd compressed (magic bytes: 28 b5 2f fd)
 			const isZstdCompressed =
@@ -98,8 +98,7 @@ export class AnkiPackageParser {
 
 		// Initialize SQLite
 		const SQL = await this.getSqlJs();
-		let dbBuffer = await dbFile.async("arraybuffer");
-		const dbBytes = new Uint8Array(dbBuffer);
+		let dbBytes = dbFileData;
 
 		// Check for zstd magic bytes (28 b5 2f fd)
 		if (
@@ -109,15 +108,14 @@ export class AnkiPackageParser {
 			dbBytes[2] === 0x2f &&
 			dbBytes[3] === 0xfd
 		) {
-			const decompressed = zstdDecompress(dbBytes);
-			dbBuffer = decompressed.slice().buffer;
+			dbBytes = zstdDecompress(dbBytes);
 		} else {
 			throw new Error(
 				"Unsupported Anki export. Expected zstd-compressed collection.anki21b",
 			);
 		}
 
-		const db = new SQL.Database(new Uint8Array(dbBuffer));
+		const db = new SQL.Database(dbBytes);
 
 		try {
 			// Parse all data from the database (new schema only)
@@ -142,8 +140,8 @@ export class AnkiPackageParser {
 	 * Check if the ArrayBuffer represents a supported .apkg format.
 	 */
 	async isSupported(buffer: ArrayBuffer): Promise<boolean> {
-		const zip = await JSZip.loadAsync(buffer);
-		return Boolean(zip.file("collection.anki21b"));
+		const zip = unzipSync(new Uint8Array(buffer));
+		return "collection.anki21b" in zip;
 	}
 
 	/**
@@ -154,12 +152,11 @@ export class AnkiPackageParser {
 		buffer: ArrayBuffer,
 		numericKey: string,
 	): Promise<Uint8Array | null> {
-		const zip = await JSZip.loadAsync(buffer);
-		const mediaZipFile = zip.file(numericKey);
-		if (!mediaZipFile) return null;
+		const zip = unzipSync(new Uint8Array(buffer));
+		const mediaFileData = zip[numericKey];
+		if (!mediaFileData) return null;
 
-		const mediaBuffer = await mediaZipFile.async("arraybuffer");
-		let mediaBytes = new Uint8Array(mediaBuffer);
+		let mediaBytes = mediaFileData;
 
 		// Detect zstd-compressed media (magic bytes: 28 b5 2f fd)
 		if (
@@ -524,20 +521,14 @@ export class AnkiPackageParser {
 
 	/**
 	 * Get the protobuf Type for Anki media entries.
+	 * Uses precompiled schema with protobufjs/light.
 	 */
-	private getMediaProtoType(): protobuf.Type {
+	private getMediaProtoType(): ReturnType<typeof getMediaEntriesType> {
 		if (this.mediaProtoType) {
 			return this.mediaProtoType;
 		}
 
-		const proto = `
-			syntax = "proto3";
-			message MediaEntries { repeated MediaEntry entries = 1; }
-			message MediaEntry { string name = 1; uint32 size = 2; bytes sha1 = 3; }
-		`;
-		const root = protobuf.parse(proto).root;
-		const type = root.lookupType("MediaEntries");
-		this.mediaProtoType = type;
-		return type;
+		this.mediaProtoType = getMediaEntriesType();
+		return this.mediaProtoType;
 	}
 }

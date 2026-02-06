@@ -118,7 +118,7 @@ describe("Review Session", function () {
 		// Wait a bit for UI to update
 		await browser.pause(500);
 
-		// Either still reviewing or completed - both are valid
+		// Either still reviewing or done - both are valid
 		const stillInReview = await isReviewUIDisplayed();
 		expect(stillInReview).toBe(true);
 	});

@@ -20,6 +20,7 @@
    flex: 0 0 auto;
    padding: var(--size-4-4);
    padding-right: 50px;
+   padding-left: 50px;
    border-bottom: 1px solid var(--background-modifier-border);
    background: var(--modal-background);
 }
@@ -51,10 +52,7 @@
 }
 
 .is-mobile .flashcard-card-modal {
-   max-height: calc(
-      100vh - var(--header-height) - max(var(--size-4-2), env(safe-area-inset-top)) -
-         max(var(--size-4-2), env(safe-area-inset-bottom))
-   );
+   max-height: calc(100vh - var(--header-height) - max(var(--size-4-2), env(safe-area-inset-top)) - max(var(--size-4-2), env(safe-area-inset-bottom)));
 }
 
 .flashcard-card-progress {

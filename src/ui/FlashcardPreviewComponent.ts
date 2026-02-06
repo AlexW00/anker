@@ -243,8 +243,8 @@ export class FlashcardPreviewComponent extends Component {
 		// Progress text
 		const reviewsText =
 			session.reviewsPerformed > completedCount
-				? `${completedCount} / ${session.initialTotal} completed (${session.reviewsPerformed} reviews)`
-				: `${completedCount} / ${session.initialTotal} completed`;
+				? `${completedCount} / ${session.initialTotal} done (${session.reviewsPerformed} reviews)`
+				: `${completedCount} / ${session.initialTotal} done`;
 		header.createSpan({
 			text: reviewsText,
 			cls: "flashcard-progress-text",

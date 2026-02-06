@@ -10,6 +10,30 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === "production";
 
+// Node.js modules that should be shimmed with empty mocks for mobile compatibility
+// These are aliased below and must be excluded from the external array
+const aliasedModules = ["fs", "path", "crypto", "stream", "buffer", "long"];
+
+/**
+ * Plugin to stub @protobufjs/inquire for mobile compatibility.
+ * The inquire module uses eval("quire".replace(/^/,"re")) to dynamically require
+ * Node.js modules at runtime, which bypasses esbuild's aliasing.
+ * This plugin replaces inquire with a no-op that returns null.
+ */
+const stubInquirePlugin = {
+	name: "stub-inquire",
+	setup(build) {
+		build.onResolve({ filter: /^@protobufjs\/inquire$/ }, () => ({
+			path: "@protobufjs/inquire",
+			namespace: "stub-inquire",
+		}));
+		build.onLoad({ filter: /.*/, namespace: "stub-inquire" }, () => ({
+			contents: "module.exports = function inquire() { return null; };",
+			loader: "js",
+		}));
+	},
+};
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
@@ -19,6 +43,17 @@ const context = await esbuild.context({
 		{ in: "src/main.ts", out: "main" },
 		{ in: "src/styles/styles.css", out: "styles" },
 	],
+	alias: {
+		"sql.js": "sql.js/dist/sql-wasm.js",
+		"nunjucks": "nunjucks/browser/nunjucks.js",
+		// Mock Node.js modules for mobile compatibility (used by protobufjs/light)
+		"fs": "./src/utils/mocks.ts",
+		"path": "./src/utils/mocks.ts",
+		"crypto": "./src/utils/mocks.ts",
+		"stream": "./src/utils/mocks.ts",
+		"buffer": "./src/utils/mocks.ts",
+		"long": "./src/utils/mocks.ts",
+	},
 	bundle: true,
 	external: [
 		"obsidian",
@@ -34,7 +69,8 @@ const context = await esbuild.context({
 		"@lezer/common",
 		"@lezer/highlight",
 		"@lezer/lr",
-		...builtinModules,
+		// Filter out aliased modules so they get the mock implementations instead
+		...builtinModules.filter(m => !aliasedModules.includes(m)),
 	],
 	format: "cjs",
 	target: "es2018",
@@ -43,6 +79,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outdir: ".",
 	minify: prod,
+	plugins: [stubInquirePlugin],
 });
 
 if (prod) {

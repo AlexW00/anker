@@ -228,8 +228,8 @@ describe("Review Bugs", function () {
 		const stillInReview = await isReviewUIDisplayed();
 		if (stillInReview) {
 			const progressText = await getProgressText();
-			// The text should at minimum show the completed/total format
-			expect(progressText).toMatch(/\d+\s*\/\s*\d+\s*completed/);
+			// The text should at minimum show the done/total format
+			expect(progressText).toMatch(/\d+\s*\/\s*\d+\s*done/);
 		}
 	});
 

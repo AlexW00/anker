@@ -8,9 +8,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import * as fflate from "fflate";
 import * as kuromoji from "@patdx/kuromoji";
 import type { Tokenizer } from "@patdx/kuromoji";
-import pako from "pako";
 
 type FuriganaFormat = "curly" | "ruby" | "parentheses" | "brackets";
 
@@ -116,8 +116,8 @@ describe("Furigana Conversion Integration", () => {
 				// Read compressed file
 				const compressedData = readFileSync(filePath);
 
-				// Decompress gzip data using pako
-				const decompressed = pako.ungzip(
+				// Decompress gzip data using fflate
+				const decompressed = fflate.gunzipSync(
 					new Uint8Array(compressedData),
 				);
 				return decompressed.buffer;

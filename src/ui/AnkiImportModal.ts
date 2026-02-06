@@ -200,17 +200,13 @@ export class AnkiImportModal extends Modal {
 			cls: "anki-import-file-section",
 		});
 
-		const setting = new Setting(fileSection)
-			.setName("Select an .apkg file")
-			.setDesc("Import decks from Anki.");
-
 		const fileInput = document.createElement("input");
 		fileInput.type = "file";
 		fileInput.accept = ".apkg,.colpkg";
 		fileInput.addClass("anki-import-file-input-hidden");
 		fileSection.appendChild(fileInput);
 
-		const controlEl = setting.controlEl.createDiv({
+		const controlEl = fileSection.createDiv({
 			cls: "anki-import-file-control",
 		});
 
