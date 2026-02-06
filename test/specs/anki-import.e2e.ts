@@ -1,7 +1,6 @@
 /* eslint-disable import/no-nodejs-modules */
 /* eslint-disable @typescript-eslint/await-thenable */
 /* eslint-disable obsidianmd/no-static-styles-assignment */
-import { describe, it, beforeEach, afterEach } from "mocha";
 import { browser, expect } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForVaultReady } from "../helpers/waitForVaultReady";

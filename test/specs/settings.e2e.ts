@@ -1,4 +1,3 @@
-import { describe, it, before, after } from "mocha";
 import { browser, expect } from "@wdio/globals";
 import type { ElementArray } from "webdriverio";
 import { obsidianPage } from "wdio-obsidian-service";

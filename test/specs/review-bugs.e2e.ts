@@ -1,4 +1,3 @@
-import { describe, it, beforeEach } from "mocha";
 import { browser, expect } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForVaultReady } from "../helpers/waitForVaultReady";
