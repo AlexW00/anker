@@ -101,3 +101,50 @@ jobs:
           name: e2e-screenshots-${{ matrix.version }}
           path: errorShots/
 
+
+  release:
+    needs: [lint, unit-test, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      - name: Get version
+        id: version
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Check if release exists
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Install dependencies
+        if: steps.check_release.outputs.exists == 'false'
+        run: npm ci
+      - name: Build
+        if: steps.check_release.outputs.exists == 'false'
+        run: npm run build
+      - name: Create Release
+        if: steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            main.js
+            manifest.json
+            styles.css
