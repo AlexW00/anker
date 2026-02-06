@@ -50,6 +50,14 @@ Obsidian community plugin for spaced repetition flashcards using FSRS. The plugi
 - Create re-usable components for repeated UI patterns (e.g. lists etc) so that the plugin looks consistent and shares code.
 - Write high value unit tests for logic that does not depend on the Obsidian API.
 
+## Review system learnings
+
+- Do not rely on the metadata cache immediately after writing frontmatter; keep in-memory session state or read from disk when freshness matters.
+- When a card stays due after rating, keep it in the session and increment a separate reviews-performed counter.
+- Avoid re-querying due cards mid-session if it depends on stale cache data; update only the current card's state in the session list.
+- Auto-regeneration during review must be non-blocking and tolerate missing templates without throwing or spamming errors.
+- Ensure every card has a stable `_id` at creation/import; add a migration for legacy cards missing IDs.
+
 ## Testing guidelines
 
 - After any code changes, run lint, typecheck, and unit + integration tests.
