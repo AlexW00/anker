@@ -11,6 +11,8 @@ on:
     paths-ignore:
       - "README.md"
       - "LICENSE"
+  schedule:
+    - cron: "0 8 * * 1"
 
 jobs:
   lint:
@@ -44,7 +46,7 @@ jobs:
 
   e2e:
     needs: lint
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
