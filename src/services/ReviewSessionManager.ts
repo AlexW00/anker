@@ -152,6 +152,12 @@ export class ReviewSessionManager extends Events {
 	 * End the current review session.
 	 */
 	endSession(): void {
+		// Clean up session leaf marker
+		if (this.sessionLeaf) {
+			this.sessionLeaf.view?.containerEl?.classList.remove(
+				"anker-review-session-leaf",
+			);
+		}
 		this.session = null;
 		this.sessionLeaf = null;
 		// Remove body class for CSS-based content hiding
@@ -246,7 +252,14 @@ export class ReviewSessionManager extends Events {
 		}
 
 		if (nextDueCards.length === 0) {
+			// Clean up session leaf marker
+			if (this.sessionLeaf) {
+				this.sessionLeaf.view?.containerEl?.classList.remove(
+					"anker-review-session-leaf",
+				);
+			}
 			this.session = null;
+			this.sessionLeaf = null;
 			document.body.classList.remove("anker-review-session-active");
 			document.body.classList.remove("anker-review-card-loading");
 			debugLog("review: session complete");
@@ -262,6 +275,7 @@ export class ReviewSessionManager extends Events {
 			currentIndex >= 0 ? (currentIndex + 1) % nextDueCards.length : 0;
 		const nextCard = nextDueCards[nextIndex];
 		if (!nextCard) return;
+		const isSameCard = nextCard.path === this.session.currentCardPath;
 
 		// Update session
 		this.session.cards = nextDueCards;
@@ -278,8 +292,11 @@ export class ReviewSessionManager extends Events {
 		this.trigger("card-changed", this.session);
 		debugLog("review: card changed", nextCard.path);
 
-		// Open the next card
-		await this.openCardInPreview(nextCard.path);
+		// Open the next card unless it is already the active card.
+		// Reopening the same file can leave the preview hidden while it re-renders.
+		if (!isSameCard) {
+			await this.openCardInPreview(nextCard.path);
+		}
 	}
 
 	/**
@@ -319,9 +336,18 @@ export class ReviewSessionManager extends Events {
 			leaf = this.app.workspace.getLeaf("tab");
 		}
 
+		// Clean up old session leaf marker if switching leaves
+		if (this.sessionLeaf && this.sessionLeaf !== leaf) {
+			this.sessionLeaf.view?.containerEl?.classList.remove(
+				"anker-review-session-leaf",
+			);
+		}
+
 		// Track the session leaf for cleanup
 		this.sessionLeaf = leaf;
 
+		// Mark this leaf for flicker prevention CSS (scoped to this leaf only)
+		leaf.view?.containerEl?.classList.add("anker-review-session-leaf");
 		document.body.classList.add("anker-review-card-loading");
 		debugLog("review: open card", cardPath);
 		await leaf.openFile(file, { state: { mode: "preview" } });

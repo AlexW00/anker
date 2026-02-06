@@ -36,9 +36,10 @@ display: none !important;
    Flicker Prevention
    Hide content during review session until decoration completes.
    This prevents the full content from being briefly visible when opening a card.
+   Scoped to session leaf only so other tabs render normally.
    -------------------------------------------------------------------------- */
-body.anker-review-session-active .markdown-preview-sizer:not(.anker-decorated) > *,
-body.anker-review-card-loading .markdown-preview-sizer > * {
+.anker-review-session-leaf .markdown-preview-sizer:not(.anker-decorated),
+body.anker-review-card-loading .markdown-preview-sizer {
 visibility: hidden;
 }
 

@@ -577,8 +577,27 @@ export default class AnkerPlugin extends Plugin {
 	 * Register hotkeys on a scope for review mode.
 	 */
 	private registerReviewHotkeysOnScope(scope: Scope): void {
+		const shouldHandleReviewHotkey = (): boolean => {
+			const sessionLeaf = this.reviewSessionManager.getSessionLeaf();
+			if (!sessionLeaf) return false;
+			const activeView = this.app.workspace.getActiveViewOfType(
+				MarkdownView,
+			);
+			if (!activeView || activeView.leaf !== sessionLeaf) {
+				return false;
+			}
+
+			const view = sessionLeaf.view;
+			if (!(view instanceof MarkdownView)) return false;
+			const getMode = (view as { getMode?: () => string }).getMode;
+			if (!getMode) return false;
+			const mode = getMode.call(view);
+			return mode === "preview";
+		};
+
 		// Space - reveal next side or rate as "Good"
 		scope.register([], " ", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			const session = this.reviewSessionManager.getSession();
 			if (!session) return;
 			if (!this.reviewSessionManager.isLastSide()) {
@@ -591,6 +610,7 @@ export default class AnkerPlugin extends Plugin {
 
 		// E - edit current card
 		scope.register([], "e", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			const session = this.reviewSessionManager.getSession();
 			if (!session) return;
 			const file = this.app.vault.getAbstractFileByPath(
@@ -604,6 +624,7 @@ export default class AnkerPlugin extends Plugin {
 
 		// 1 - rate as Again
 		scope.register([], "1", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			if (!this.reviewSessionManager.isLastSide()) return;
 			void this.reviewSessionManager.rateCard(Rating.Again);
 			return false;
@@ -611,6 +632,7 @@ export default class AnkerPlugin extends Plugin {
 
 		// 2 - rate as Hard
 		scope.register([], "2", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			if (!this.reviewSessionManager.isLastSide()) return;
 			void this.reviewSessionManager.rateCard(Rating.Hard);
 			return false;
@@ -618,6 +640,7 @@ export default class AnkerPlugin extends Plugin {
 
 		// 3 - rate as Good
 		scope.register([], "3", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			if (!this.reviewSessionManager.isLastSide()) return;
 			void this.reviewSessionManager.rateCard(Rating.Good);
 			return false;
@@ -625,6 +648,7 @@ export default class AnkerPlugin extends Plugin {
 
 		// 4 - rate as Easy
 		scope.register([], "4", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			if (!this.reviewSessionManager.isLastSide()) return;
 			void this.reviewSessionManager.rateCard(Rating.Easy);
 			return false;
@@ -632,7 +656,9 @@ export default class AnkerPlugin extends Plugin {
 
 		// Escape - end review session
 		scope.register([], "Escape", () => {
+			if (!shouldHandleReviewHotkey()) return true;
 			this.reviewSessionManager.endSession();
+			void this.openDashboard();
 			return false;
 		});
 	}

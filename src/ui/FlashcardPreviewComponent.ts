@@ -51,7 +51,7 @@ export class FlashcardPreviewComponent extends Component {
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => {
 				if (file) {
-					setTimeout(() => this.decorateFlashcardViews(), 50);
+					this.decorateFlashcardViews();
 				}
 			}),
 		);

@@ -42,16 +42,15 @@ export class ConfirmEndSessionModal extends Modal {
 
 		// Button container
 		const buttonContainer = contentEl.createDiv({
-			cls: "modal-button-container",
+			cls: "modal-button-container anker-review-end-session-buttons",
 		});
-		buttonContainer.style.display = "flex";
-		buttonContainer.style.justifyContent = "space-between";
-		buttonContainer.style.alignItems = "center";
 
-		const leftButtons = buttonContainer.createDiv();
-		const rightButtons = buttonContainer.createDiv();
-		rightButtons.style.display = "flex";
-		rightButtons.style.gap = "8px";
+		const leftButtons = buttonContainer.createDiv({
+			cls: "anker-review-end-session-left",
+		});
+		const rightButtons = buttonContainer.createDiv({
+			cls: "anker-review-end-session-right",
+		});
 
 		// Cancel button (left side)
 		leftButtons
